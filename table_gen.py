@@ -128,6 +128,11 @@ class mask:
 
             arr[idx] |= (1 << off)
             # |= operador de asignación de bits OR
+        
+        def clear_bit(arr, pos):
+            idx = pos // 64
+            off = pos % 64
+            arr[idx] &= ~(1 << off)  # Limpiar bit a 0
 
         # Máscara para la fila
         for c in range(n):
@@ -161,6 +166,7 @@ class mask:
             f += 1
             c -= 1
 
+        clear_bit(mascara_total, fila * n + columna)
         return mascara_total
 
     def init_mask_array(self):
@@ -188,7 +194,8 @@ if __name__ == '__main__':
     print('tabla con reinas aleatorias')
     t.print_table()
     t.plot_chessboard()
-    t.generate_mask(15, 15)
+    m = mask(15)
+    m.generate_mask(15, 15)
     t.apply_mask()
     print('mascara 4,4')
     t.plot_chessboard()

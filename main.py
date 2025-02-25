@@ -46,21 +46,20 @@ class GA:
         for col in range(n):
             bit_index = row * n + col
             idx = bit_index // 64
-            offset = int(bit_index % 64)
-            if int(individual.table[idx]) & (1 << offset):
+            offset = (bit_index % 64)
+            if np.bitwise_and((individual.table[idx]), np.uint64(1 << offset)):
                 queen_count += 1
                 # Revisar colisiones
                 ind_masked = individual.copy()
                 self.mask.apply_mask(ind_masked, row, col)
-
+  
                 for i in range(len(ind_masked.table)):
                     number = int(ind_masked.table[i].item())
-                    collisions += self.popcount(number) - 1
+                    collisions += self.popcount(number)
 
     return queen_count, collisions
 
   def evaluate_solution(self, individual):
-    
     queen_count, collisions = self.count_queens_collisions(self, individual)
     # print(f'Collisions: {collisions}, Queens: { queen_count}')
     # return 1.0 / (queen_count + collisions) if (queen_count + collisions) > 0 else 0
@@ -199,9 +198,9 @@ class GA:
 
 if __name__ == "__main__":
   # Parameters
-  n = 10           # 8x8 board
+  n = 10           # nxn board
   npop = 100      # population size 
-  ngen = 1000     # number of generations
+  ngen = 100     # number of generations
   pmut = 0.1     # mutation probability
   pcross = 0.85    # crossover probability
   
