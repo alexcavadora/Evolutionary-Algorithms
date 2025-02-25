@@ -1,41 +1,51 @@
 import numpy as np
 
-def generateTableOfBytes(n):
-  return bytearray(n*n)
+def generateTableOfBits(n):
+  bytes_needed = int(np.ceil((n*n) / 8))
+  return bytearray(bytes_needed)
 
 def prettyChessTablePrint(chess_table, table_size, printBinary=False):
-  for row in range(0, len(chess_table), table_size):
-    for col in range(table_size):
-      pos = row + col
-      if chess_table[pos] == 1:
-        if printBinary:
-          print(' 1 ', end='')
-        else:
-          print(' Q ', end='')
-      elif chess_table[pos] == 0:
-        if printBinary:
-          print(' 0 ', end='')
-        else:
-          print(' . ', end='')
-    print()
-  print()
+  for i in range(table_size):
+    row = bin(chess_table[i]) # Convert to binary
+    row = row.replace('0b', '') # Delete the '0b' prefix
+    row = row.rjust(table_size, '0') # Pad with zeros to the right
+
+
+    # print(bin(chess_table[row]).replace('0b', ''))
+  # binary = bin(chess_table).replace('0b', '')
+  # print(binary)
+  # for row in range(0, table_size**2, table_size):
+  #   for col in range(table_size):
+  #     pos = row + col
+  #     if chess_table[pos] == 1:
+  #       if printBinary:
+  #         print(' 1 ', end='')
+  #       else:
+  #         print(' Q ', end='')
+  #     elif chess_table[pos] == 0:
+  #       if printBinary:
+  #         print(' 0 ', end='')
+  #       else:
+  #         print(' . ', end='')
+  #   print()
+  # print()
     
 def defaultFuncInit(pop, table_size):
-  for individual in pop:
-    available_cols = list(range(table_size))
-    # Generate a queen in each row randomly
-    for row in range(0, len(individual), table_size):
-      # Avoid generating a queen in the same column
-      col = np.random.choice(available_cols)
-      available_cols.remove(col)
-      individual[row + col] = 1
-  return pop
+  pass
+#   for individual in pop:
+#     available_cols = list(range(table_size))
+#     # Generate a queen in each row randomly
+#     for row in range(0, len(individual), table_size):
+#       # Avoid generating a queen in the same column
+#       col = np.random.choice(available_cols)
+#       available_cols.remove(col)
+#       individual[row + col] = 1
+#   return pop
 
-def defaultFEval(pop):
-  fitness = np.zeros(len(pop))
+# def defaultFEval(pop):
+#   fitness = np.zeros(len(pop))
 
   # Detect all the collisions using a mask
-  
 
 class GA:
   '''
@@ -56,13 +66,15 @@ class GA:
     self.pCross = pCross
     self.ptrFuncInit = ptrFuncInit
 
-    self.pop = [generateTableOfBytes(table_size) for _ in range(nPop)]
+    self.pop = [generateTableOfBits(table_size) for _ in range(nPop)]
     self.pop_fit = np.zeros(nPop)
     self.pop_select = self.pop
     self.offspring = self.pop
+
+    prettyChessTablePrint(self.pop[0], self.table_size)
     
     # Initialize the population
-    self.pop = self.ptrFuncInit(self.pop, table_size)
+    # self.pop = self.ptrFuncInit(self.pop, table_size)
   def solve(self):
     pass
 
