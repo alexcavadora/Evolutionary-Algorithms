@@ -6,6 +6,16 @@ class table:
         self.n = n
         pass
 
+    def copy(self):
+        """
+        Crea una copia profunda del tablero actual
+        Returns:
+            table: Una nueva instancia de table con los mismos datos
+        """
+        new_table = table(self.n)
+        new_table.table = self.table.copy()  # NumPy array tiene su propio método copy()
+        return new_table
+    
     @staticmethod
     def generate_nxn_bits(n):
         """
@@ -39,6 +49,7 @@ class table:
 
     # Generar una máscara para una reina en la fila y columna especificadas
     def generate_mask(self, fila, columna):
+        n = self.n
         n_bits = self.n*self.n
         n_integers = (n_bits + 63) // 64
         
@@ -48,7 +59,7 @@ class table:
         def set_bit(arr, pos):
             idx = pos // 64
             off = int(pos % 64)
-            print(f'idx: {idx}, off: {off}')
+
             arr[idx] |= (1 << off)
             # |= operador de asignación de bits OR
 
