@@ -4,7 +4,6 @@ class table:
     def __init__(self,n):
         self.table = self.generate_nxn_bits(n)
         self.n = n
-        pass
 
     def copy(self):
         """
@@ -46,63 +45,6 @@ class table:
 
             tablero[indice] = nuevo_valor
         self.table = tablero
-
-    # Generar una máscara para una reina en la fila y columna especificadas
-    def generate_mask(self, fila, columna):
-        n = self.n
-        n_bits = self.n*self.n
-        n_integers = (n_bits + 63) // 64
-        
-        # Inicializar la máscara total a 0 en todos los bits
-        mascara_total = [0] * n_integers
-
-        def set_bit(arr, pos):
-            idx = pos // 64
-            off = int(pos % 64)
-
-            arr[idx] |= (1 << off)
-            # |= operador de asignación de bits OR
-
-        # Máscara para la fila
-        for c in range(n):
-            set_bit(mascara_total, fila * n + c)
-
-        # Máscara para la columna
-        for r in range(n):
-            set_bit(mascara_total, r * n + columna)
-
-        # Máscara para la diagonal principal
-        f, c = fila, columna
-        while f >= 0 and c >= 0:
-            set_bit(mascara_total, f * n + c)
-            f -= 1
-            c -= 1
-        f, c = fila + 1, columna + 1
-        while f < n and c < n:
-            set_bit(mascara_total, f * n + c)
-            f += 1
-            c += 1
-
-        # Máscara para la diagonal secundaria
-        f, c = fila, columna
-        while f >= 0 and c < n:
-            set_bit(mascara_total, f * n + c)
-            f -= 1
-            c += 1
-        f, c = fila + 1, columna - 1
-        while f < n and c >= 0:
-            set_bit(mascara_total, f * n + c)
-            f += 1
-            c -= 1
-
-        self.mask = mascara_total
-    
-    # Aplicar la máscara a la tabla actual
-    def apply_mask(self):
-        table_data = self.table
-        mask_array = self.mask
-        for i in range(len(table_data)):
-            table_data[i] = np.bitwise_and(table_data[i], np.uint64(mask_array[i]))
 
     # Imprimir la tabla en la consola
     def print_table(self):
@@ -166,7 +108,75 @@ class table:
     ##        se debe a que la gráfica no está tomando en cuenta la inversión de los ejes
     ##        en la gráfica, el eje y se invierte para que las filas se muestren en orden descendente
 
+class mask:
+    def __init__(self,n):
+        self.mask_array = [[None for _ in range(n)] for _ in range(n)]
+        self.n = n
 
+    # Generar una máscara para una reina en la fila y columna especificadas
+    def generate_mask(self, fila, columna):
+        n = self.n
+        n_bits = self.n*self.n
+        n_integers = (n_bits + 63) // 64
+        
+        # Inicializar la máscara total a 0 en todos los bits
+        mascara_total = [0] * n_integers
+
+        def set_bit(arr, pos):
+            idx = pos // 64
+            off = int(pos % 64)
+
+            arr[idx] |= (1 << off)
+            # |= operador de asignación de bits OR
+
+        # Máscara para la fila
+        for c in range(n):
+            set_bit(mascara_total, fila * n + c)
+
+        # Máscara para la columna
+        for r in range(n):
+            set_bit(mascara_total, r * n + columna)
+
+        # Máscara para la diagonal principal
+        f, c = fila, columna
+        while f >= 0 and c >= 0:
+            set_bit(mascara_total, f * n + c)
+            f -= 1
+            c -= 1
+        f, c = fila + 1, columna + 1
+        while f < n and c < n:
+            set_bit(mascara_total, f * n + c)
+            f += 1
+            c += 1
+
+        # Máscara para la diagonal secundaria
+        f, c = fila, columna
+        while f >= 0 and c < n:
+            set_bit(mascara_total, f * n + c)
+            f -= 1
+            c += 1
+        f, c = fila + 1, columna - 1
+        while f < n and c >= 0:
+            set_bit(mascara_total, f * n + c)
+            f += 1
+            c -= 1
+
+        return mascara_total
+
+    def init_mask_array(self):
+        for i in range(self.n):
+            for j in range(self.n):
+                mask = self.generate_mask(i,j)
+                self.mask_array[i][j] = mask
+
+    # Aplicar la máscara a la tabla actual
+    def apply_mask(self,individual,fila,columna):
+        table_data = individual.table
+        mask_array = self.mask_array[fila][columna]
+        for i in range(len(table_data)):
+            table_data[i] = np.bitwise_and(table_data[i], np.uint64(mask_array[i]))
+
+    
 
 
 if __name__ == '__main__':

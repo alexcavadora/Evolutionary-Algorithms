@@ -1,6 +1,7 @@
 import numpy as np
 
 from table_gen import table
+from table_gen import mask
 
 
 class GA:
@@ -17,6 +18,8 @@ class GA:
     self.pop_fit = np.zeros(npop)
     self.pop_select = [table(n) for _ in range(npop)]
     self.offspring = [table(n) for _ in range(npop)]
+    self.mask = mask(n)
+    self.mask.init_mask_array()
     
     # Initialize the population
   
@@ -32,12 +35,13 @@ class GA:
         count += 1
     return count
 
-  def evaluate_solution(self, individual):
+  @staticmethod
+  def count_queens_collisions(self, individual):
+  # Contar colisiones y reinas
     collisions = 0
     queen_count = 0
     n = individual.n
-    
-    # Contar colisiones y reinas
+
     for row in range(n):
         for col in range(n):
             bit_index = row * n + col
@@ -47,17 +51,21 @@ class GA:
                 queen_count += 1
                 # Revisar colisiones
                 ind_masked = individual.copy()
-                ind_masked.generate_mask(row, col)
-                ind_masked.apply_mask()
-                # ind_masked.print_table()
-                # Contar reinas eficientemente
+                self.mask.apply_mask(ind_masked, row, col)
+
                 for i in range(len(ind_masked.table)):
                     number = int(ind_masked.table[i].item())
                     collisions += self.popcount(number) - 1
-                # print(f'Collisions: {collisions}')
+
+    return queen_count, collisions
+
+  def evaluate_solution(self, individual):
+    
+    queen_count, collisions = self.count_queens_collisions(self, individual)
     # print(f'Collisions: {collisions}, Queens: { queen_count}')
     # return 1.0 / (queen_count + collisions) if (queen_count + collisions) > 0 else 0
-    return queen_count - collisions
+    aux = (1.0 / n) + collisions
+    return 1.0 / (aux + 1e-6)
   
   def fitness_eval(self):
     for i in range(0,self.npop):
@@ -145,6 +153,7 @@ class GA:
                 offset = int(bit % 64)
                 # Aplicar XOR para invertir el bit
                 self.offspring[i].table[idx] ^= np.uint64(1 << offset)
+                ## ^= operador de asignación de bits XOR
 
   def union(self):
     """
@@ -160,7 +169,7 @@ class GA:
     k_gen = 0
     best_fitness = float('-inf')
     best_solution = None
-
+    q, c = [0,10]
     while k_gen < self.ngen:  # Criterio de parada: número de generaciones
         k_gen += 1
         
@@ -179,8 +188,10 @@ class GA:
         self.mutate()        # Mutación
         self.union()         # Actualizar población
         
+        q,c = self.count_queens_collisions(self, best_solution)
+
         # Opcional: mostrar progreso
-        print(f"Generación {k_gen}: Mejor fitness = {best_fitness}")
+        print(f"Generación {k_gen}: Mejor fitness = {best_fitness:2f} - Queens = {q} - Colisiones = {c}")
     
     return best_solution, best_fitness
     
@@ -188,11 +199,11 @@ class GA:
 
 if __name__ == "__main__":
   # Parameters
-  n = 8           # 8x8 board
+  n = 10           # 8x8 board
   npop = 100      # population size 
   ngen = 1000     # number of generations
-  pmut = 0.01     # mutation probability
-  pcross = 0.6    # crossover probability
+  pmut = 0.1     # mutation probability
+  pcross = 0.85    # crossover probability
   
   # Create and run GA
   ga = GA(n, npop, None, ngen, pmut, pcross)
