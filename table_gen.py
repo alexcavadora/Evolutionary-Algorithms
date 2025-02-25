@@ -174,21 +174,40 @@ class mask:
         table_data = individual.table
         mask_array = self.mask_array[fila][columna]
         for i in range(len(table_data)):
-            table_data[i] = np.bitwise_and(table_data[i], np.uint64(mask_array[i]))
+            table_data[i] = np.bitwise_or(table_data[i], np.uint64(mask_array[i]))
 
     
 
 
 if __name__ == '__main__':
-    n = 30
+    # Create an 8x8 board (smaller size to better visualize the effect)
+    from main import GA
+    # Parameters
+    n = 8           # 8x8 board
+    npop = 100      # population size 
+    ngen = 1000     # number of generations
+    pmut = 0.5     # mutation probability
+    pcross = 0.85    # crossover probability
+    
+    # Create and run GA
+    ga = GA(n, npop, None, ngen, pmut, pcross)
     t = table(n)
-    print('tabla vacia')
-    t.print_table()
+    
+    # Generate random queens
     t.generate_random_table()
-    print('tabla con reinas aleatorias')
+    print('Original table with random queens:')
     t.print_table()
-    t.plot_chessboard()
-    t.generate_mask(15, 15)
-    t.apply_mask()
-    print('mascara 4,4')
+    # t.plot_chessboard()
+    
+    # Create and initialize mask
+    m = mask(n)
+    m.init_mask_array()
+    
+    # Apply mask for position (3,3) - this will keep only queens that don't conflict
+    # with a queen at position (3,3)
+    m.apply_mask(t, 3, 3)
+    print('\nTable after applying mask for position (3,3):')
+    t.print_table()
+    q,c = ga.count_queens_collisions(t)
+    print(f"Queens = {q} - Colisiones = {c}")
     t.plot_chessboard()

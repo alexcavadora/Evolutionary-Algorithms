@@ -30,12 +30,16 @@ class GA:
     Este método es más eficiente que contar bit por bit.
     """
     count = 0
-    while x:
-        x &= (x - 1)  # Elimina el bit 1 menos significativo
-        count += 1
+    # while x:
+    #     x &= (x - 1)  # Elimina el bit 1 menos significativo
+    #     count += 1
+    # return count
+    binary = bin(x)
+    print(binary)
+    count = binary.count('1')
     return count
 
-  @staticmethod
+  # @staticmethod
   def count_queens_collisions(self, individual):
   # Contar colisiones y reinas
     collisions = 0
@@ -54,8 +58,9 @@ class GA:
                 self.mask.apply_mask(ind_masked, row, col)
 
                 for i in range(len(ind_masked.table)):
-                    number = int(ind_masked.table[i].item())
-                    collisions += self.popcount(number) - 1
+                    number = np.uint64(ind_masked.table[i].item())
+                    collisions += self.popcount(number) 
+                    # collisions += self.popcount(number) 
 
     return queen_count, collisions
 
@@ -192,6 +197,8 @@ class GA:
 
         # Opcional: mostrar progreso
         print(f"Generación {k_gen}: Mejor fitness = {best_fitness:2f} - Queens = {q} - Colisiones = {c}")
+        if q == self.mask.n and c == 0:
+            return best_solution, best_fitness
     
     return best_solution, best_fitness
     
@@ -202,7 +209,7 @@ if __name__ == "__main__":
   n = 10           # 8x8 board
   npop = 100      # population size 
   ngen = 1000     # number of generations
-  pmut = 0.1     # mutation probability
+  pmut = 0.5     # mutation probability
   pcross = 0.85    # crossover probability
   
   # Create and run GA
