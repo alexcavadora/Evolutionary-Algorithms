@@ -109,36 +109,41 @@ class table:
     ##        en la gráfica, el eje y se invierte para que las filas se muestren en orden descendente
 
 class mask:
-    def __init__(self,n):
-        self.mask_array = [[None for _ in range(n)] for _ in range(n)]
+    def __init__(self, n):
         self.n = n
+        self.mask_array = [[None for _ in range(n)] for _ in range(n)]  # Inicializar matriz de máscaras
+        self.init_mask_array()
 
-    # Generar una máscara para una reina en la fila y columna especificadas
     def generate_mask(self, fila, columna):
+        """
+        Genera una máscara para la dama en (fila, columna).
+        La máscara cubre la fila, columna y diagonales, excluyendo la posición de la dama.
+        """
         n = self.n
-        n_bits = self.n*self.n
+        n_bits = n * n
         n_integers = (n_bits + 63) // 64
         
         # Inicializar la máscara total a 0 en todos los bits
         mascara_total = [0] * n_integers
 
         def set_bit(arr, pos):
+            """Activa el bit en la posición `pos`."""
             idx = pos // 64
             off = int(pos % 64)
-
             arr[idx] |= (1 << off)
-            # |= operador de asignación de bits OR
 
-        # Máscara para la fila
+        # Máscara para la fila (excluyendo la posición de la dama)
         for c in range(n):
-            set_bit(mascara_total, fila * n + c)
+            if c != columna:
+                set_bit(mascara_total, fila * n + c)
 
-        # Máscara para la columna
+        # Máscara para la columna (excluyendo la posición de la dama)
         for r in range(n):
-            set_bit(mascara_total, r * n + columna)
+            if r != fila:
+                set_bit(mascara_total, r * n + columna)
 
-        # Máscara para la diagonal principal
-        f, c = fila, columna
+        # Máscara para la diagonal principal (excluyendo la posición de la dama)
+        f, c = fila - 1, columna - 1
         while f >= 0 and c >= 0:
             set_bit(mascara_total, f * n + c)
             f -= 1
@@ -149,8 +154,8 @@ class mask:
             f += 1
             c += 1
 
-        # Máscara para la diagonal secundaria
-        f, c = fila, columna
+        # Máscara para la diagonal secundaria (excluyendo la posición de la dama)
+        f, c = fila - 1, columna + 1
         while f >= 0 and c < n:
             set_bit(mascara_total, f * n + c)
             f -= 1
@@ -164,20 +169,21 @@ class mask:
         return mascara_total
 
     def init_mask_array(self):
+        """
+        Inicializa la matriz de máscaras para todas las posiciones del tablero.
+        """
         for i in range(self.n):
             for j in range(self.n):
-                mask = self.generate_mask(i,j)
-                self.mask_array[i][j] = mask
+                self.mask_array[i][j] = self.generate_mask(i, j)
 
-    # Aplicar la máscara a la tabla actual
-    def apply_mask(self,individual,fila,columna):
+    def apply_mask(self, individual, fila, columna):
+        """
+        Aplica la máscara a la tabla del individuo.
+        """
         table_data = individual.table
         mask_array = self.mask_array[fila][columna]
         for i in range(len(table_data)):
-            table_data[i] = np.bitwise_or(table_data[i], np.uint64(mask_array[i]))
-
-    
-
+            table_data[i] = np.bitwise_and(table_data[i], np.uint64(mask_array[i]))
 
 if __name__ == '__main__':
     # Create an 8x8 board (smaller size to better visualize the effect)

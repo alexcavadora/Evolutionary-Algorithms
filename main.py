@@ -35,13 +35,15 @@ class GA:
     #     count += 1
     # return count
     binary = bin(x)
-    print(binary)
     count = binary.count('1')
     return count
 
   # @staticmethod
   def count_queens_collisions(self, individual):
-  # Contar colisiones y reinas
+    """
+    Cuenta el número de reinas y colisiones en el tablero.
+    Utiliza self.mask.apply_mask para aplicar la máscara y evitar el doble conteo.
+    """
     collisions = 0
     queen_count = 0
     n = individual.n
@@ -50,23 +52,28 @@ class GA:
         for col in range(n):
             bit_index = row * n + col
             idx = bit_index // 64
-            offset = int(bit_index % 64)
-            if int(individual.table[idx]) & (1 << offset):
+            offset = bit_index % 64
+            if int(individual.table[idx]) & (1 << offset):  # Verificar si hay una reina
                 queen_count += 1
-                # Revisar colisiones
+
+                # Crear una copia del individuo para aplicar la máscara
                 ind_masked = individual.copy()
                 self.mask.apply_mask(ind_masked, row, col)
 
+                # Contar colisiones usando la máscara
                 for i in range(len(ind_masked.table)):
-                    number = np.uint64(ind_masked.table[i].item())
-                    collisions += self.popcount(number) 
-                    # collisions += self.popcount(number) 
+                    # Contar bits activos en la tabla enmascarada
+                    number = ind_masked.table[i]
+                    collisions += self.popcount(number)
+
+    # Dividir por 2 para evitar el doble conteo
+    collisions = collisions // 2
 
     return queen_count, collisions
 
   def evaluate_solution(self, individual):
     
-    queen_count, collisions = self.count_queens_collisions(self, individual)
+    queen_count, collisions = self.count_queens_collisions(individual)
     # print(f'Collisions: {collisions}, Queens: { queen_count}')
     # return 1.0 / (queen_count + collisions) if (queen_count + collisions) > 0 else 0
     aux = (1.0 / n) + collisions
@@ -144,21 +151,20 @@ class GA:
 
   def mutate(self):
     """
-    Aplica mutación bit a bit a toda la población offspring
-    usando XOR para invertir bits con probabilidad pmut
+    Versión optimizada de la mutación.
+    Aplica mutación a todos los bits de un individuo con probabilidad pmut.
     """
     n = self.pop[0].n
-    n_bits = n * n
-    
-    for i in range(1,self.npop):
-        for bit in range(n_bits):
-            u = np.random.rand() # Random number between 0 and 1
-            if u < self.pmut:
-                idx = bit // 64
-                offset = int(bit % 64)
+    n_bits = n**2
+
+    for i in range(self.npop):  # Iterar sobre toda la población
+        u = np.random.rand()  # Número aleatorio entre 0 y 1
+        if u < self.pmut:  # Aplicar mutación a todos los bits del individuo
+            for bit in range(n_bits):
+                idx = bit // 64  # Índice del entero en la tabla
+                offset = int(bit % 64)  # Desplazamiento dentro del entero
                 # Aplicar XOR para invertir el bit
                 self.offspring[i].table[idx] ^= np.uint64(1 << offset)
-                ## ^= operador de asignación de bits XOR
 
   def union(self):
     """
@@ -193,31 +199,26 @@ class GA:
         self.mutate()        # Mutación
         self.union()         # Actualizar población
         
-        q,c = self.count_queens_collisions(self, best_solution)
+        q,c = self.count_queens_collisions(best_solution)
 
         # Opcional: mostrar progreso
         print(f"Generación {k_gen}: Mejor fitness = {best_fitness:2f} - Queens = {q} - Colisiones = {c}")
         if q == self.mask.n and c == 0:
-            return best_solution, best_fitness
+          print("\nBest solution found:")
+          best_solution.plot_chessboard()
+          print(f"Fitness: {best_fitness}")
+          return best_solution, best_fitness
     
     return best_solution, best_fitness
-    
-
 
 if __name__ == "__main__":
   # Parameters
-  n = 10           # 8x8 board
-  npop = 100      # population size 
+  n = 12     # 8x8 board
+  npop = 1000      # population size 
   ngen = 1000     # number of generations
-  pmut = 0.5     # mutation probability
+  pmut = 0.1     # mutation probability
   pcross = 0.85    # crossover probability
   
   # Create and run GA
   ga = GA(n, npop, None, ngen, pmut, pcross)
   best_solution, best_fitness = ga.solve()
-  
-  # Print results
-  print("\nBest solution found:")
-  best_solution.plot_chessboard()
-  print(f"Fitness: {best_fitness}")
-
