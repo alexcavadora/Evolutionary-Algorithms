@@ -1,5 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+
 *.py[cod]
 *$py.class
 
@@ -171,3 +172,4 @@ cython_debug/
 .pypirc
 
 TODO.md
+*.DS_Store
