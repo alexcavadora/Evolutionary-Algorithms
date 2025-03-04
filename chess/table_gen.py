@@ -90,7 +90,7 @@ class table:
                 # Convert to Python int before bitwise operation
                 if int(self.table[idx].item()) & (1 << offset):
                     ax.text(col + 0.5, self.n - row - 0.5, '♛',
-                            ha='center', va='center', color='#FFD700', fontsize=14)
+                            ha='center', va='center', color='#09AD24', fontsize=14)
 
         axis = range(self.n)
         ax.set_xticks(axis)
@@ -148,7 +148,7 @@ class mask:
             set_bit(mascara_total, f * n + c)
             f -= 1
             c -= 1
-        f, c = fila + 1, columna + 1
+        f, c = fila , columna
         while f < n and c < n:
             set_bit(mascara_total, f * n + c)
             f += 1
@@ -160,7 +160,7 @@ class mask:
             set_bit(mascara_total, f * n + c)
             f -= 1
             c += 1
-        f, c = fila + 1, columna - 1
+        f, c = fila , columna 
         while f < n and c >= 0:
             set_bit(mascara_total, f * n + c)
             f += 1

@@ -47,7 +47,7 @@ class GA:
             bit_index = row * n + col
             idx = bit_index // 64
             offset = (bit_index % 64)
-            if np.bitwise_and((individual.table[idx]), np.uint64(1 << offset)):
+            if np.bitwise_and( np.uint64(individual.table[idx]), np.uint64(1 << offset)):
                 queen_count += 1
                 # Revisar colisiones
                 ind_masked = individual.copy()
@@ -198,7 +198,7 @@ class GA:
 
 if __name__ == "__main__":
   # Parameters
-  n = 10           # nxn board
+  n = 8           # nxn board
   npop = 100      # population size 
   ngen = 100     # number of generations
   pmut = 0.1     # mutation probability

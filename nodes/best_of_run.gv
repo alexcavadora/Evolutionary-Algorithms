@@ -1,0 +1,20 @@
+digraph {
+	graph [label="Final solution at gen 68, error: 0.247426"]
+	0 [label=add]
+	0 -> 1
+	1 [label=1]
+	0 -> 2
+	2 [label=mul]
+	2 -> 3
+	3 [label=add]
+	3 -> 4
+	4 [label=x]
+	3 -> 5
+	5 [label=x]
+	2 -> 6
+	6 [label=add]
+	6 -> 7
+	7 [label=1]
+	6 -> 8
+	8 [label=x]
+}
