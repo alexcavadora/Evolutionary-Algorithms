@@ -16,6 +16,8 @@ except ImportError:
     HAS_GRAPHVIZ = False
     print("Graphviz not installed. Tree visualization will be text-based.", file=sys.stderr)
 
+from node import BlifDecoder  # Add BlifDecoder import
+
 # Type aliases
 Terminal = Union[str, int, float]
 Function = Callable[[float, float], float]
@@ -29,6 +31,58 @@ TOURNAMENT_SIZE: int = 5  # size of tournament for tournament selection
 XO_RATE: float = 0.8      # crossover rate 
 PROB_MUTATION: float = 0.2  # per-node mutation probability 
 BLOAT_CONTROL: bool = False  # True adds bloat control to fitness function
+
+BLIF_FILE: str = "nodes/dec.blif"  # Path to your BLIF file
+OPTIMIZATION_MODE: str = "circuit"  # "circuit" or "math"
+
+# Circuit optimization functions
+def invert_bit(x: float, y: float) -> float:
+    """Invert a bit value (NOT gate). Ignores y."""
+    return 1.0 - x
+
+def and_gate(x: float, y: float) -> float:
+    """AND gate function."""
+    return float(x > 0.5 and y > 0.5)
+
+def or_gate(x: float, y: float) -> float:
+    """OR gate function."""
+    return float(x > 0.5 or y > 0.5)
+
+def xor_gate(x: float, y: float) -> float:
+    """XOR gate function."""
+    return float((x > 0.5) != (y > 0.5))
+
+# Replace original function and terminal definitions
+# Define math functions FIRST
+def add(x: float, y: float) -> float: 
+    return x + y
+
+def sub(x: float, y: float) -> float: 
+    return x - y
+
+def mul(x: float, y: float) -> float: 
+    return x * y
+
+# Then declare the function lists
+CIRCUIT_FUNCTIONS: List[Function] = [and_gate, or_gate, xor_gate, invert_bit]
+MATH_FUNCTIONS: List[Function] = [add, sub, mul]
+
+# Default terminals based on mode
+FUNCTIONS = CIRCUIT_FUNCTIONS if OPTIMIZATION_MODE == "circuit" else MATH_FUNCTIONS
+TERMINALS: List[Terminal] = ['x', 0, 1] if OPTIMIZATION_MODE == "circuit" else ['x', -2, -1, 0, 1, 2]
+
+# Initialize BLIF decoder
+blif_decoder = BlifDecoder(BLIF_FILE) if OPTIMIZATION_MODE == "circuit" else None
+
+def generate_test_vectors(num_vectors: int = 20) -> List[List[int]]:
+    """Generate random test vectors for circuit evaluation."""
+    input_size = len(blif_decoder.inputs)
+    return [
+        [random.randint(0, 1) for _ in range(input_size)]
+        for _ in range(num_vectors)
+    ]
+
+TEST_VECTORS = generate_test_vectors() if OPTIMIZATION_MODE == "circuit" else []
 
 def add(x: float, y: float) -> float: 
     return x + y
@@ -238,11 +292,39 @@ def error(individual: GPTree, dataset: List[List[float]]) -> float:
         abs(individual.compute_tree(ds[0]) - ds[1]) for ds in dataset
     )
 
-def fitness(individual: GPTree, dataset: List[List[float]]) -> float:
-    """Calculate fitness with optional bloat control."""
+def circuit_error(individual: GPTree) -> float:
+    """Calculate error for circuit optimization."""
+    total_error = 0
+    for test_vector in TEST_VECTORS:
+        # Set inputs and simulate original circuit
+        blif_decoder.set_inputs_from_vector(test_vector)
+        blif_decoder.simulate()
+        original_outputs = blif_decoder.get_outputs_as_vector()
+        
+        # Apply GP tree modifications
+        modified_outputs = [
+            1 if individual.compute_tree(output) > 0.5 else 0 
+            for output in original_outputs
+        ]
+        
+        # Calculate target outputs (example: invert all outputs)
+        target_outputs = [1 - output for output in original_outputs]
+        
+        # Accumulate error
+        total_error += sum(m != t for m, t in zip(modified_outputs, target_outputs))
+    
+    return total_error / (len(TEST_VECTORS) * len(target_outputs))
+
+def fitness(individual: GPTree, dataset: Optional[List[List[float]]] = None) -> float:
+    """Updated fitness function for circuit optimization."""
+    if OPTIMIZATION_MODE == "circuit":
+        err = circuit_error(individual)
+    else:
+        err = error(individual, dataset or generate_dataset())
+    
     if BLOAT_CONTROL:
-        return 1 / (1 + error(individual, dataset) + 0.01 * individual.size())
-    return 1 / (1 + error(individual, dataset))
+        return 1 / (1 + err + 0.01 * individual.size())
+    return 1 / (1 + err)
                 
 def selection(
     population: List[GPTree], 
