@@ -48,17 +48,28 @@ def or_gate(x: float, y: float) -> float:
     """OR gate function."""
     return float(x > 0.5 or y > 0.5)
 
-def nor_gate(x: float, y: float) -> float:
-    """NOR gate function."""
-    return float(not (x > 0.5 or y > 0.5))
+def xor_gate(x: float, y: float) -> float:
+    """XOR gate function."""
+    return float((x > 0.5) != (y > 0.5))
+
+# Replace original function and terminal definitions
+# Define math functions FIRST
+def add(x: float, y: float) -> float: 
+    return x + y
+
+def sub(x: float, y: float) -> float: 
+    return x - y
+
+def mul(x: float, y: float) -> float: 
+    return x * y
 
 # Then declare the function lists
-CIRCUIT_FUNCTIONS: List[Function] = [and_gate, or_gate, nor_gate]
-MATH_FUNCTIONS: List[Function] = [and_gate, or_gate, nor_gate]  # Using logic gates for math mode too
+CIRCUIT_FUNCTIONS: List[Function] = [and_gate, or_gate, xor_gate, invert_bit]
+MATH_FUNCTIONS: List[Function] = [add, sub, mul]
 
 # Default terminals based on mode
 FUNCTIONS = CIRCUIT_FUNCTIONS if OPTIMIZATION_MODE == "circuit" else MATH_FUNCTIONS
-TERMINALS: List[Terminal] = ['x', 0, 1] if OPTIMIZATION_MODE == "circuit" else ['x', 0, 1]  # Binary values only
+TERMINALS: List[Terminal] = ['x', 0, 1] if OPTIMIZATION_MODE == "circuit" else ['x', -2, -1, 0, 1, 2]
 
 # Initialize BLIF decoder
 blif_decoder = BlifDecoder(BLIF_FILE) if OPTIMIZATION_MODE == "circuit" else None
@@ -73,18 +84,17 @@ def generate_test_vectors(num_vectors: int = 20) -> List[List[int]]:
 
 TEST_VECTORS = generate_test_vectors() if OPTIMIZATION_MODE == "circuit" else []
 
-# Remove these duplicate function definitions
-# def add(x: float, y: float) -> float: 
-#     return x + y
-# 
-# def sub(x: float, y: float) -> float: 
-#     return x - y
-# 
-# def mul(x: float, y: float) -> float: 
-#     return x * y
-# 
-# FUNCTIONS: List[Function] = [add, sub, mul]
-# TERMINALS: List[Terminal] = ['x', -2, -1, 0, 1, 2]
+def add(x: float, y: float) -> float: 
+    return x + y
+
+def sub(x: float, y: float) -> float: 
+    return x - y
+
+def mul(x: float, y: float) -> float: 
+    return x * y
+
+FUNCTIONS: List[Function] = [add, sub, mul]
+TERMINALS: List[Terminal] = ['x', -2, -1, 0, 1, 2]
 
 def target_func(x: float) -> float:
     """Evolution's target function."""
@@ -282,7 +292,6 @@ def error(individual: GPTree, dataset: List[List[float]]) -> float:
         abs(individual.compute_tree(ds[0]) - ds[1]) for ds in dataset
     )
 
-# Update circuit error calculation to use actual circuit outputs
 def circuit_error(individual: GPTree) -> float:
     """Calculate error for circuit optimization."""
     total_error = 0
@@ -292,26 +301,19 @@ def circuit_error(individual: GPTree) -> float:
         blif_decoder.simulate()
         original_outputs = blif_decoder.get_outputs_as_vector()
         
-        # Get inputs for GP tree (use first input only)
-        gp_input = test_vector[0] if test_vector else 0
+        # Apply GP tree modifications
+        modified_outputs = [
+            1 if individual.compute_tree(output) > 0.5 else 0 
+            for output in original_outputs
+        ]
         
-        # Get modified output from GP tree
-        modified_output = 1 if individual.compute_tree(gp_input) > 0.5 else 0
-        
-        # Target output is original circuit output
-        target_output = original_outputs[0]
+        # Calculate target outputs (example: invert all outputs)
+        target_outputs = [1 - output for output in original_outputs]
         
         # Accumulate error
-        total_error += abs(modified_output - target_output)
+        total_error += sum(m != t for m, t in zip(modified_outputs, target_outputs))
     
-    return total_error / len(TEST_VECTORS)
-
-# Update target function for circuit mode
-def target_func(x: float) -> float:
-    """Evolution's target function."""
-    if OPTIMIZATION_MODE == "circuit":
-        return float(x > 0.5)  # Simple threshold for circuit mode
-    return x**4 + x**3 + x**2 + x + 1
+    return total_error / (len(TEST_VECTORS) * len(target_outputs))
 
 def fitness(individual: GPTree, dataset: Optional[List[List[float]]] = None) -> float:
     """Updated fitness function for circuit optimization."""
