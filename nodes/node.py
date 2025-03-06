@@ -215,7 +215,7 @@ class BlifDecoder:
 # Ejemplo de uso:
 if __name__ == "__main__":
     # Crear una instancia del decodificador
-    decoder = BlifDecoder("nodes/dec.blif")
+    decoder = BlifDecoder("dec.blif")
     
     # Establecer valores de entrada
     test_vector = [1, 0, 1, 0, 1, 0, 1, 0]  # Vector de prueba

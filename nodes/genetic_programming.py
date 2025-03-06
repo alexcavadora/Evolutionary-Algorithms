@@ -23,7 +23,7 @@ Terminal = Union[str, int, float]
 Function = Callable[[float, float], float]
 
 # Configuration constants
-POP_SIZE: int = 60        # population size
+POP_SIZE: int = 20        # population size
 MIN_DEPTH: int = 2        # minimal initial random tree depth
 MAX_DEPTH: int = 5        # maximal initial random tree depth
 GENERATIONS: int = 250    # maximal number of generations to run evolution
@@ -32,10 +32,9 @@ XO_RATE: float = 0.8      # crossover rate
 PROB_MUTATION: float = 0.2  # per-node mutation probability 
 BLOAT_CONTROL: bool = False  # True adds bloat control to fitness function
 
-BLIF_FILE: str = "nodes/dec.blif"  # Path to your BLIF file
+BLIF_FILE: str = "dec.blif"  # Path to your BLIF file
 OPTIMIZATION_MODE: str = "circuit"  # "circuit" or "math"
 
-# Circuit optimization functions
 def invert_bit(x: float, y: float) -> float:
     """Invert a bit value (NOT gate). Ignores y."""
     return 1.0 - x
@@ -52,6 +51,14 @@ def xor_gate(x: float, y: float) -> float:
     """XOR gate function."""
     return float((x > 0.5) != (y > 0.5))
 
+def nand_gate(x: float, y: float) -> float:
+    """NAND gate function."""
+    return invert_bit(and_gate(x, y), 0.0)
+
+def nor_gate(x: float, y: float) -> float:
+    """NOR gate function."""
+    return invert_bit(or_gate(x, y), 0.0)
+
 # Replace original function and terminal definitions
 # Define math functions FIRST
 def add(x: float, y: float) -> float: 
@@ -64,7 +71,7 @@ def mul(x: float, y: float) -> float:
     return x * y
 
 # Then declare the function lists
-CIRCUIT_FUNCTIONS: List[Function] = [and_gate, or_gate, xor_gate, invert_bit]
+CIRCUIT_FUNCTIONS: List[Function] = [and_gate, or_gate, nor_gate, nand_gate, invert_bit]
 MATH_FUNCTIONS: List[Function] = [add, sub, mul]
 
 # Default terminals based on mode
@@ -108,8 +115,8 @@ class GPTree:
     def __init__(
         self, 
         data: Optional[Union[Function, Terminal]] = None, 
-        left: Optional[GPTree] = None, 
-        right: Optional[GPTree] = None
+        left: Optional["GPTree"] = None, 
+        right: Optional["GPTree"] = None
     ):
         self.data: Optional[Union[Function, Terminal]] = data
         self.left: Optional[GPTree] = left
@@ -209,14 +216,23 @@ class GPTree:
     def mutation(self) -> None:
         """Mutate the tree with a given probability."""
         if random.random() < PROB_MUTATION:
-            # Mutate current node
-            self.random_tree(grow=True, max_depth=2)
+            # Si el nodo original es una función, aseguramos que el mutado también sea función
+            if self.data in FUNCTIONS:
+                self.data = random.choice(FUNCTIONS)
+                self.left = GPTree()
+                self.right = GPTree()
+                self.left.random_tree(grow=True, max_depth=2)
+                self.right.random_tree(grow=True, max_depth=2)
+            else:  
+                # Si es un terminal, aseguramos que siga siendo terminal
+                self.data = random.choice(TERMINALS)
         else:
-            # Recursively mutate children
+            # Recursivamente mutar hijos
             if self.left:
                 self.left.mutation()
             if self.right:
                 self.right.mutation()
+
         
     def size(self) -> int:
         """Calculate the size of the tree in nodes."""
@@ -268,29 +284,51 @@ class GPTree:
             # Replace a random subtree in this tree with the selected subtree
             if second:
                 self.scan_tree([random.randint(1, self.size())], second)
+                if second is not None:
+                    self.scan_tree([random.randint(1, self.size())], second)
+
 
 def init_population() -> List[GPTree]:
-    """Initialize population using ramped half-and-half method."""
+    """Mejora la inicialización de la población."""
     pop = []
     for md in range(3, MAX_DEPTH + 1):
-        # Grow method
-        for _ in range(POP_SIZE // 6):
+        for _ in range(POP_SIZE // 4):  # Reducir tamaño de cada grupo
             t = GPTree()
             t.random_tree(grow=True, max_depth=md)
             pop.append(t)
-        
-        # Full method
-        for _ in range(POP_SIZE // 6):
+
             t = GPTree()
             t.random_tree(grow=False, max_depth=md)
             pop.append(t)
     return pop
 
+
 def error(individual: GPTree, dataset: List[List[float]]) -> float:
-    """Calculate mean absolute error."""
-    return statistics.mean(
-        abs(individual.compute_tree(ds[0]) - ds[1]) for ds in dataset
-    )
+    """Calculate mean absolute error (MAE) with error handling."""
+    if not dataset:
+        return float('inf')  # Retorna un error infinito si no hay datos
+
+    errors = []
+    for ds in dataset:
+        if len(ds) != 2:  # Verificar que los datos sean correctos
+            print(f"Error: dataset mal formado {ds}", file=sys.stderr)
+            continue  # Ignorar este punto
+
+        x, y = ds
+        try:
+            prediction = individual.compute_tree(x)
+            if not isinstance(prediction, (int, float)):  # Verifica que compute_tree(x) sea válido
+                raise ValueError(f"compute_tree devolvió un valor no numérico: {prediction}")
+            if abs(prediction) > 1e6:  # Evitar valores extremos
+                print(f"Advertencia: Predicción muy grande {prediction} para x={x}", file=sys.stderr)
+                prediction = float('inf')
+
+            errors.append(abs(prediction - y))
+        except Exception as e:
+            print(f"Error en la evaluación de {ds}: {e}", file=sys.stderr)
+            errors.append(float('inf'))  # Penaliza errores con un valor alto
+    
+    return statistics.mean(errors) if errors else float('inf')  # Maneja el caso de lista vacía
 
 def circuit_error(individual: GPTree) -> float:
     """Calculate error for circuit optimization."""
@@ -323,24 +361,19 @@ def fitness(individual: GPTree, dataset: Optional[List[List[float]]] = None) -> 
         err = error(individual, dataset or generate_dataset())
     
     if BLOAT_CONTROL:
-        return 1 / (1 + err + 0.01 * individual.size())
+        return 1 / (1 + err + 0.05 * individual.size())
     return 1 / (1 + err)
                 
-def selection(
-    population: List[GPTree], 
-    fitnesses: List[float]
-) -> GPTree:
-    """Tournament selection."""
-    # Select tournament contenders
-    tournament_indices = random.choices(
-        range(len(population)), 
-        k=TOURNAMENT_SIZE
-    )
+def selection(population: List[GPTree], fitnesses: List[float]) -> GPTree:
+    """Mejor selección por torneo."""
+    k = min(TOURNAMENT_SIZE, len(population))
+    tournament_indices = random.choices(range(len(population)), k=k)
     tournament_fitnesses = [fitnesses[i] for i in tournament_indices]
-    
-    # Return the best individual in the tournament
-    winner_index = tournament_indices[tournament_fitnesses.index(max(tournament_fitnesses))]
-    return copy.deepcopy(population[winner_index])
+
+    # Priorizar individuos con mejor fitness
+    best_index = max(range(len(tournament_indices)), key=lambda i: tournament_fitnesses[i])
+    return copy.deepcopy(population[tournament_indices[best_index]])
+
 
 def prepare_plots() -> tuple:
     """Prepare interactive matplotlib plots."""
