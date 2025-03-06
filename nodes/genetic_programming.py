@@ -25,10 +25,10 @@ Function = Callable[[float, float], float]
 # Configuration constants
 POP_SIZE: int = 20        # population size
 MIN_DEPTH: int = 2        # minimal initial random tree depth
-MAX_DEPTH: int = 5        # maximal initial random tree depth
-GENERATIONS: int = 250    # maximal number of generations to run evolution
-TOURNAMENT_SIZE: int = 5  # size of tournament for tournament selection
-XO_RATE: float = 0.8      # crossover rate 
+MAX_DEPTH: int = 4        # maximal initial random tree depth
+GENERATIONS: int = 100    # maximal number of generations to run evolution
+TOURNAMENT_SIZE: int = 4  # size of tournament for tournament selection
+XO_RATE: float = 0.5      # crossover rate 
 PROB_MUTATION: float = 0.2  # per-node mutation probability 
 BLOAT_CONTROL: bool = False  # True adds bloat control to fitness function
 
