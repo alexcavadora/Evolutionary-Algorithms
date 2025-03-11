@@ -31,6 +31,7 @@ class GA:
             output_vector.append(output) # Almacena la salida
 
         error = self.decoder.compare_outputs(output_vector)
+        error += tree.get_depth()
         # depht = tree.get_depth()
         return error
     
@@ -84,19 +85,24 @@ class GA:
 
     def solve(self):
         self.init_pop()
+        self.evaluate_pop()  # Add initial population evaluation
+        best_history = [self.best_fitness]
+        
         for i in range(self.n_gen):
-            self.evaluate_pop()
             self.select_pop()
             self.crossover()
             self.mutation()
-            self.pop = self.offspring.copy()
+            self.pop = [ind.copy() for ind in self.offspring]  # Deep copy to prevent reference issues
+            self.evaluate_pop()
+            best_history.append(self.best_fitness)
+            
             print(f"Generation: {i}, Best fitness: {self.best_fitness}")
             if self.best_fitness == 0:
                 break
-
+                
         print(f"Best fitness: {self.best_fitness}")
-
-
+        return best_history
+        
 if __name__ == "__main__":
 
     POPULATION = 80
@@ -106,6 +112,16 @@ if __name__ == "__main__":
 
 
     algorithm = GA(POPULATION, GENERATIONS, CROSSOVER, MUTATION);
-    algorithm.solve();
+    history = algorithm.solve();
     algorithm.best.visualize();
     print(algorithm.best)
+    
+    # Optional: Add visualization of fitness progress
+    import matplotlib.pyplot as plt
+    plt.figure(figsize=(10, 6))
+    plt.plot(history)
+    plt.title('Best Fitness Over Generations')
+    plt.xlabel('Generation')
+    plt.ylabel('Fitness (lower is better)')
+    plt.grid(True)
+    plt.show()
