@@ -173,3 +173,5 @@ cython_debug/
 
 TODO.md
 *.DS_Store
+nodes/trees/my_circuit_tree
+nodes/trees/my_circuit_tree.png
