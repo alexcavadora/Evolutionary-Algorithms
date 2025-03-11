@@ -156,15 +156,13 @@ class node:
                 color = "lightblue"
             else:
                 name = ''
-                
-                match node.value.__name__:
-                    case 'and_gate':
+                if node.value.__name__ == 'and_gate':
                         name = '&&'
-                    case 'or_gate':
+                if node.value.__name__ == 'or_gate':
                         name = '||'
-                    case 'nor_gate':
+                if node.value.__name__ == 'nor_gate':
                         name = '!||'
-                    case 'nand_gate':
+                if node.value.__name__ == 'nand_gate':
                         name = '!&&'
                 label = name
                 color = "lightgreen"
