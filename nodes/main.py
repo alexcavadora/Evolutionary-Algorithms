@@ -1,6 +1,7 @@
 from Parser import SimulatedCircuit
 from NodeClass import node
 import random
+import matplotlib.pyplot as plt
 
 class GA:
 
@@ -17,6 +18,7 @@ class GA:
         self.offspring = [0]*n_pop
         self.decoder = SimulatedCircuit("dec.blif")
         self.decoder.simulate()
+        self.history = []
         
     def init_pop(self):
         for i in range(self.n_pop):
@@ -31,8 +33,8 @@ class GA:
             output_vector.append(output) # Almacena la salida
 
         error = self.decoder.compare_outputs(output_vector)
-        # depht = tree.get_depth()
-        return error
+        depht = tree.get_depth()
+        return error + depht
     
     def evaluate_pop(self):
         self.pop_fitness = []
@@ -91,21 +93,31 @@ class GA:
             self.mutation()
             self.pop = self.offspring.copy()
             print(f"Generation: {i}, Best fitness: {self.best_fitness}")
+            self.history.append(self.best_fitness)
             if self.best_fitness == 0:
                 break
 
         print(f"Best fitness: {self.best_fitness}")
 
+    def best_evolution(self):
+        plt.style.use('ggplot')
+        plt.title("Best fitness evolution")
+        plt.xlabel("Generation")
+        plt.ylabel("Fitness")
+        plt.plot(self.history)
+        plt.show()
+        
 
 if __name__ == "__main__":
 
-    POPULATION = 80
+    POPULATION = 10
     GENERATIONS = 100
-    CROSSOVER = 0.75
+    CROSSOVER = 0.8
     MUTATION = 0.1
 
 
     algorithm = GA(POPULATION, GENERATIONS, CROSSOVER, MUTATION);
     algorithm.solve();
     algorithm.best.visualize();
+    algorithm.best_evolution();
     print(algorithm.best)
