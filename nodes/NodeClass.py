@@ -155,7 +155,18 @@ class node:
                 label = f"X[{node.value}]"
                 color = "lightblue"
             else:
-                label = node.value.__name__
+                name = ''
+                
+                match node.value.__name__:
+                    case 'and_gate':
+                        name = '&&'
+                    case 'or_gate':
+                        name = '||'
+                    case 'nor_gate':
+                        name = '!||'
+                    case 'nand_gate':
+                        name = '!&&'
+                label = name
                 color = "lightgreen"
             
             # Añadir el nodo al grafo
