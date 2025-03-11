@@ -1,0 +1,16 @@
+// Árbol de Circuito
+digraph {
+	"5dfaacf1-1bcb-4c33-9162-80a5da4c55a3" [label=or_gate fillcolor=lightgreen style=filled]
+	"c11309a4-e3cc-4cd7-9f58-4e213b7e72a8" [label=nand_gate fillcolor=lightgreen style=filled]
+	"5dfaacf1-1bcb-4c33-9162-80a5da4c55a3" -> "c11309a4-e3cc-4cd7-9f58-4e213b7e72a8"
+	"0d269ae0-eb36-4415-b7b3-461f55b1eaa3" [label="X[7]" fillcolor=lightblue style=filled]
+	"c11309a4-e3cc-4cd7-9f58-4e213b7e72a8" -> "0d269ae0-eb36-4415-b7b3-461f55b1eaa3"
+	"4c79c2d3-b6fd-48b2-bde8-e1808b346f6a" [label=nor_gate fillcolor=lightgreen style=filled]
+	"c11309a4-e3cc-4cd7-9f58-4e213b7e72a8" -> "4c79c2d3-b6fd-48b2-bde8-e1808b346f6a"
+	"d1a8119d-853c-466f-a501-a82301be04dd" [label="X[7]" fillcolor=lightblue style=filled]
+	"4c79c2d3-b6fd-48b2-bde8-e1808b346f6a" -> "d1a8119d-853c-466f-a501-a82301be04dd"
+	"71caa003-c9ea-461c-89a2-f52f6e0efff6" [label="X[0]" fillcolor=lightblue style=filled]
+	"4c79c2d3-b6fd-48b2-bde8-e1808b346f6a" -> "71caa003-c9ea-461c-89a2-f52f6e0efff6"
+	"87eddf48-a37b-494d-b306-0a1056f49f3a" [label="X[0]" fillcolor=lightblue style=filled]
+	"5dfaacf1-1bcb-4c33-9162-80a5da4c55a3" -> "87eddf48-a37b-494d-b306-0a1056f49f3a"
+}

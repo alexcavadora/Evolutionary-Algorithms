@@ -5,6 +5,7 @@ import statistics
 import copy
 import os
 import sys
+import itertools
 from typing import Callable, List, Union, Optional
 
 import matplotlib.pyplot as plt
@@ -16,24 +17,23 @@ except ImportError:
     HAS_GRAPHVIZ = False
     print("Graphviz not installed. Tree visualization will be text-based.", file=sys.stderr)
 
-from node import BlifDecoder  # Add BlifDecoder import
+from nodes.blif_deco import BlifDecoder  # Add BlifDecoder import
 
 # Type aliases
 Terminal = Union[str, int, float]
 Function = Callable[[float, float], float]
 
 # Configuration constants
-POP_SIZE: int = 60        # population size
+POP_SIZE: int = 30        # population size
 MIN_DEPTH: int = 2        # minimal initial random tree depth
 MAX_DEPTH: int = 5        # maximal initial random tree depth
-GENERATIONS: int = 250    # maximal number of generations to run evolution
-TOURNAMENT_SIZE: int = 5  # size of tournament for tournament selection
+GENERATIONS: int = 100    # maximal number of generations to run evolution
+TOURNAMENT_SIZE: int = 3  # size of tournament for tournament selection
 XO_RATE: float = 0.8      # crossover rate 
-PROB_MUTATION: float = 0.2  # per-node mutation probability 
+PROB_MUTATION: float = 0.01  # per-node mutation probability 
 BLOAT_CONTROL: bool = False  # True adds bloat control to fitness function
 
-BLIF_FILE: str = "nodes/dec.blif"  # Path to your BLIF file
-OPTIMIZATION_MODE: str = "circuit"  # "circuit" or "math"
+BLIF_FILE: str = "dec.blif"  # Path to your BLIF file
 
 # Circuit optimization functions
 def invert_bit(x: float, y: float) -> float:
@@ -48,53 +48,31 @@ def or_gate(x: float, y: float) -> float:
     """OR gate function."""
     return float(x > 0.5 or y > 0.5)
 
-def xor_gate(x: float, y: float) -> float:
-    """XOR gate function."""
-    return float((x > 0.5) != (y > 0.5))
+def nand_gate(x: float, y: float) -> float:
+    """NAND gate function."""
+    return float(not (x > 0.5 and y > 0.5))
 
-# Replace original function and terminal definitions
-# Define math functions FIRST
-def add(x: float, y: float) -> float: 
-    return x + y
+def nor_gate(x: float, y: float) -> float:
+    """NOR gate function."""
+    return float(not (x > 0.5 or y > 0.5))
 
-def sub(x: float, y: float) -> float: 
-    return x - y
-
-def mul(x: float, y: float) -> float: 
-    return x * y
 
 # Then declare the function lists
-CIRCUIT_FUNCTIONS: List[Function] = [and_gate, or_gate, xor_gate, invert_bit]
-MATH_FUNCTIONS: List[Function] = [add, sub, mul]
+CIRCUIT_FUNCTIONS: List[Function] = [and_gate, or_gate, nor_gate, nand_gate]
 
 # Default terminals based on mode
-FUNCTIONS = CIRCUIT_FUNCTIONS if OPTIMIZATION_MODE == "circuit" else MATH_FUNCTIONS
-TERMINALS: List[Terminal] = ['x', 0, 1] if OPTIMIZATION_MODE == "circuit" else ['x', -2, -1, 0, 1, 2]
-
+FUNCTIONS = CIRCUIT_FUNCTIONS 
+TERMINALS: List[Terminal] = ['x', 1, 0]
 # Initialize BLIF decoder
-blif_decoder = BlifDecoder(BLIF_FILE) if OPTIMIZATION_MODE == "circuit" else None
-
-def generate_test_vectors(num_vectors: int = 20) -> List[List[int]]:
-    """Generate random test vectors for circuit evaluation."""
+blif_decoder = BlifDecoder(BLIF_FILE) 
+def generate_test_vectors() -> List[List[int]]:
+    """Generate all possible test vectors for circuit evaluation."""
     input_size = len(blif_decoder.inputs)
-    return [
-        [random.randint(0, 1) for _ in range(input_size)]
-        for _ in range(num_vectors)
-    ]
+    return list(map(list, itertools.product([0, 1], repeat=input_size)))
 
-TEST_VECTORS = generate_test_vectors() if OPTIMIZATION_MODE == "circuit" else []
+TEST_VECTORS = generate_test_vectors()
 
-def add(x: float, y: float) -> float: 
-    return x + y
 
-def sub(x: float, y: float) -> float: 
-    return x - y
-
-def mul(x: float, y: float) -> float: 
-    return x * y
-
-FUNCTIONS: List[Function] = [add, sub, mul]
-TERMINALS: List[Terminal] = ['x', -2, -1, 0, 1, 2]
 
 def target_func(x: float) -> float:
     """Evolution's target function."""
@@ -102,7 +80,7 @@ def target_func(x: float) -> float:
 
 def generate_dataset() -> List[List[float]]:
     """Generate dataset from target function."""
-    return [[x/100, target_func(x/100)] for x in range(-100, 101, 2)]
+    return [[x/100, target_func(x/100)] for x in range(-100, 101, 2)] # -1 to 1 in 0.02 increments
 
 class GPTree:
     def __init__(
@@ -172,8 +150,8 @@ class GPTree:
                 print(f"Graphviz visualization failed: {e}", file=sys.stderr)
     def compute_tree(self, x: float) -> float:
         """Compute the value of the tree for a given x."""
-        if callable(self.data):
-            return self.data(
+        if callable(self.data): # si es una función
+            return self.data( # ejecutar la función
                 self.left.compute_tree(x) if self.left else 0, 
                 self.right.compute_tree(x) if self.right else 0
             )
@@ -183,28 +161,47 @@ class GPTree:
             return self.data
         raise ValueError(f"Invalid node data: {self.data}")
             
+    
     def random_tree(
         self, 
         grow: bool, 
         max_depth: int, 
-        depth: int = 0
+        depth: int = 0,
+        leaf_count: List[int] = None
     ) -> None:
-        """Create a random tree using grow or full method."""
-        # Determine node type based on depth and randomness
-        if depth < MIN_DEPTH or (depth < max_depth and not grow):
-            self.data = random.choice(FUNCTIONS)
-        elif depth >= max_depth:   
-            self.data = random.choice(TERMINALS)
-        else:
-            self.data = (random.choice(TERMINALS) if random.random() > 0.5 
-                         else random.choice(FUNCTIONS))
+        """Create a random tree with limited leaf nodes."""
+        # Inicializa contador de hojas si no existe
+        if leaf_count is None:
+            leaf_count = [0]
         
-        # Recursively create children if the node is a function
+        # Obtener número máximo de hojas permitido (igual al número de inputs)
+        max_leaves = len(blif_decoder.inputs)
+        
+        # Lógica para seleccionar nodo
+        if leaf_count[0] >= max_leaves:
+            # Si ya alcanzamos el límite de hojas, forzar función
+            self.data = random.choice(FUNCTIONS)
+        elif depth >= max_depth:
+            # Si alcanzamos máxima profundidad, usar terminal
+            self.data = random.choice(TERMINALS)
+            leaf_count[0] += 1
+        elif depth < MIN_DEPTH or (depth < max_depth and not grow):
+            # Profundidad mínima o método full, usar función
+            self.data = random.choice(FUNCTIONS)
+        else:
+            # Método grow, decidir entre función y terminal
+            if random.random() > 0.5 and leaf_count[0] < max_leaves:
+                self.data = random.choice(TERMINALS)
+                leaf_count[0] += 1
+            else:
+                self.data = random.choice(FUNCTIONS)
+        
+        # Recursivamente crear hijos si el nodo es función
         if callable(self.data):
-            self.left = GPTree()          
-            self.left.random_tree(grow, max_depth, depth=depth+1)            
+            self.left = GPTree()
+            self.left.random_tree(grow, max_depth, depth+1, leaf_count)
             self.right = GPTree()
-            self.right.random_tree(grow, max_depth, depth=depth+1)
+            self.right.random_tree(grow, max_depth, depth+1, leaf_count)
 
     def mutation(self) -> None:
         """Mutate the tree with a given probability."""
@@ -269,6 +266,9 @@ class GPTree:
             if second:
                 self.scan_tree([random.randint(1, self.size())], second)
 
+### END GP TREE CLASS ###
+
+
 def init_population() -> List[GPTree]:
     """Initialize population using ramped half-and-half method."""
     pop = []
@@ -308,7 +308,8 @@ def circuit_error(individual: GPTree) -> float:
         ]
         
         # Calculate target outputs (example: invert all outputs)
-        target_outputs = [1 - output for output in original_outputs]
+        # target_outputs = [1 - output for output in original_outputs]
+        target_outputs = original_outputs
         
         # Accumulate error
         total_error += sum(m != t for m, t in zip(modified_outputs, target_outputs))
@@ -317,10 +318,9 @@ def circuit_error(individual: GPTree) -> float:
 
 def fitness(individual: GPTree, dataset: Optional[List[List[float]]] = None) -> float:
     """Updated fitness function for circuit optimization."""
-    if OPTIMIZATION_MODE == "circuit":
-        err = circuit_error(individual)
-    else:
-        err = error(individual, dataset or generate_dataset())
+    
+    err = circuit_error(individual)
+    
     
     if BLOAT_CONTROL:
         return 1 / (1 + err + 0.01 * individual.size())
