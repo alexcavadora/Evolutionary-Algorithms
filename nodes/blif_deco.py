@@ -3,6 +3,7 @@ class BlifDecoder:
         """
         Inicializa un nuevo decodificador a partir de un archivo BLIF
         
+
         Args:
             blif_file (str): Ruta al archivo BLIF a cargar
         """
@@ -41,7 +42,7 @@ class BlifDecoder:
             
             # Procesar entradas
             elif line.startswith('.inputs'):
-                inputs_str = line[7:].strip()
+                inputs_str = line[7:].strip() # strip() elimina espacios al inicio y final
                 # Manejar continuación de línea con '\'
                 while line.endswith('\\') and i+1 < len(lines):
                     i += 1
@@ -208,9 +209,53 @@ class BlifDecoder:
             print(f"  {node_name}: {self.node_values[node_name]}")
         
         print("\nSalidas:")
-        for output_name in self.outputs[:10]:  # Mostrar solo las primeras 10 salidas
+        for output_name in self.outputs:  # Mostrar solo las primeras 10 salidas
             print(f"  {output_name}: {self.output_values[output_name]}")
-        print(f"  ... y {len(self.outputs) - 10} más")
+        # print(f"  ... y {len(self.outputs) - 10} más")
+
+    def get_specific_output(self, input_vector, output_name):
+        """
+        Simula el circuito con el vector de entrada especificado y devuelve
+        el valor de una única salida.
+        
+        Args:
+            input_vector (list): Vector con los valores de entrada
+            output_name (str): Nombre de la salida deseada (ej: "selectp1[0]")
+            
+        Returns:
+            int: Valor de la salida especificada (0 o 1)
+        """
+        self.set_inputs_from_vector(input_vector)
+        self.simulate()
+        return self.get_output(output_name)
+
+    def get_active_output(self, input_vector):
+        """
+        Simula el circuito con el vector de entrada especificado y devuelve
+        la posición de la salida que se activó (valor 1).
+        
+        Args:
+            input_vector (list): Vector con los valores de entrada
+        
+        Returns:
+            dict: Diccionario con {'output_name': nombre_salida, 'output_index': índice}
+                 de la salida que se activó
+        """
+        self.set_inputs_from_vector(input_vector)
+        self.simulate()
+        
+        # Buscar qué salida se activó
+        for output_name in self.output_values:
+            if self.output_values[output_name] == 1:
+                # Extraer el tipo e índice (ej: selectp1[42] -> 'selectp1', 42)
+                if '[' in output_name:
+                    name_part = output_name.split('[')[0]
+                    index_part = int(output_name.split('[')[1].split(']')[0])
+                    return {'output_name': output_name, 'output_type': name_part, 'output_index': index_part}
+                else:
+                    return {'output_name': output_name, 'output_index': -1}
+        
+        return None  # Si ninguna salida está activa
 
 # Ejemplo de uso:
 if __name__ == "__main__":
@@ -218,7 +263,7 @@ if __name__ == "__main__":
     decoder = BlifDecoder("dec.blif")
     
     # Establecer valores de entrada
-    test_vector = [1, 0, 1, 0, 1, 0, 1, 0]  # Vector de prueba
+    test_vector = [0, 0, 0, 0, 0, 0, 0, 1]  # Vector de prueba
     decoder.set_inputs_from_vector(test_vector)
     
     # Simular el circuito
@@ -229,4 +274,7 @@ if __name__ == "__main__":
     
     # Obtener un vector de salida específico
     selectp1_outputs = [decoder.get_output(f"selectp1[{i}]") for i in range(128)]
-    print("\nPrimeros 10 bits de selectp1:", selectp1_outputs[:10])
+    selectp2_outputs = [decoder.get_output(f"selectp2[{i}]") for i in range(128)]
+    result = decoder.get_active_output(test_vector)
+    print(f"Para la entrada {test_vector}, se activó: {result['output_name']} (índice: {result['output_index']})")
+    # print("\nPrimeros 10 bits de selectp1:", selectp1_outputs[:10])
