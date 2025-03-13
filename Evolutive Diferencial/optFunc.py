@@ -20,6 +20,14 @@ class PIDFunction():
     self.l1 = sides[0]
     self.l2 = sides[1]
 
+    # Historial de errores para términos integral y derivativo
+    self.Q1_history = []
+    self.Q2_history = []
+    self.integral_Q1 = 0.0
+    self.integral_Q2 = 0.0
+    self.previous_Q1 = 0.0
+    self.previous_Q2 = 0.0
+
 
   def get_Xtrayectory(self, t):
     return self.x0 + self.x*np.cos(self.w1*t)
@@ -77,6 +85,73 @@ class PIDFunction():
       sum += self.get_Xerror(t)**2 + self.get_Yerror(t)**2
     return sum
   
+  def gradiente_fopt(theta1, theta2, L1, L2):
+    # Derivada parcial con respecto a theta1
+    df_dtheta1 = L1 * np.sin(theta1) - L1 * np.cos(theta1)
+    
+    # Derivada parcial con respecto a theta2
+    df_dtheta2 = L2 * np.sin(theta2) - L2 * np.cos(theta2)
+    
+    # Retornar el gradiente como un array de numpy
+    return np.array([df_dtheta1, df_dtheta2])
+
+  def forward_kinematics(self):
+    """Calcula la posición actual (x, y) usando los ángulos teta1 y teta2."""
+    self.x = self.l1 * np.cos(self.teta1) + self.l2 * np.cos(self.teta2)
+    self.y = self.l1 * np.sin(self.teta1) + self.l2 * np.sin(self.teta2)
+    return self.x, self.y
+
+  def solve(self, target_x, target_y, tol=1e-4):
+      """
+      Encuentra teta1 y teta2 óptimos usando un control PID.
+      
+      Parámetros:
+      - target_x, target_y: Posición objetivo.
+      - tol: Tolerancia para la convergencia.
+      
+      Retorna:
+      - teta1, teta2: Ángulos óptimos en radianes.
+      """
+      # Verificar que las ganancias PID estén configuradas
+      if self.kc is None or self.ki is None or self.kd is None:
+          raise ValueError("Configura las ganancias kc, ki, kd primero.")
+
+      # Número de pasos de tiempo
+      n_steps = int(self.t_end / self.delta_t)
+      
+      for _ in range(n_steps):
+          # Calcular posición actual
+          current_x, current_y = self.forward_kinematics()
+          
+          # Calcular errores
+          Q1 = target_x - current_x
+          Q2 = target_y - current_y
+          
+          # Actualizar términos integrales
+          self.integral_Q1 += Q1 * self.delta_t
+          self.integral_Q2 += Q2 * self.delta_t
+          
+          # Calcular términos derivativos (usando diferencia finita)
+          derivative_Q1 = (Q1 - self.previous_Q1) / self.delta_t if len(self.Q1_history) > 0 else 0.0
+          derivative_Q2 = (Q2 - self.previous_Q2) / self.delta_t if len(self.Q2_history) > 0 else 0.0
+          
+          # Calcular acciones de control PID
+          U1 = self.kc * Q1 + self.ki * self.integral_Q1 + self.kd * derivative_Q1
+          U2 = self.kc * Q2 + self.ki * self.integral_Q2 + self.kd * derivative_Q2
+          
+          # Actualizar ángulos (usando velocidades angulares)
+          self.teta1 += U1 * self.delta_t
+          self.teta2 += U2 * self.delta_t
+          
+          # Guardar errores para el próximo paso
+          self.previous_Q1 = Q1
+          self.previous_Q2 = Q2
+          
+          # Verificar convergencia
+          if np.sqrt(Q1**2 + Q2**2) < tol:
+              break
+      
+      return self.teta1, self.teta2
       
   def plot_trajectory(self):
 
@@ -125,7 +200,7 @@ if __name__ == "__main__":
   x = [10, 10]  # Amplitude of the trajectory in X and Y
   w = [1, 2]  # Frequency of the trajectory in X and Y
   teta = [45, 45]  # Angles for the arm
-  sides = [3, 3]  # Lengths of the arm sides
+  sides = [3, 3]  # Lengths of the arm sides  
 
   # Create an instance of the PIDFunction
   pid_function = PIDFunction(x0, t_end,del_t, x, w, teta, sides)
