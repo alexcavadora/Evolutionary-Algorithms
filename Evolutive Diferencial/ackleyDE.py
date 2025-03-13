@@ -1,4 +1,4 @@
-from optFunc import PIDFunction
+from optFunc import AckleyFunction
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -10,13 +10,13 @@ class DE:
         self.F = F
         self.CR = CR
         self.func = func
-        self.n = 3
+        self.n = func.d
         self.history = []
 
     def init_population(self):
         ## Aqui se definen los rangos de la poblacion
-        limit = 15
-        self.pop = np.random.uniform(0, limit, (self.n_pop, self.n))
+        limit = 30
+        self.pop = np.random.uniform(-limit, limit, (self.n_pop, self.n))
 
     def abc_return(self):   
         idx = np.random.choice(self.n_pop, 3, replace=False)
@@ -24,7 +24,7 @@ class DE:
     
     def calculate_fitness_entropy(self):
         """Calcula la entropía basada en los valores de la función objetivo"""
-        fitness_values = np.array([self.func.evaluate(ind) for ind in self.pop])
+        fitness_values = np.array([self.func.eval(ind) for ind in self.pop])
         # Si la desviación estándar es pequeña, la población ha convergido
         return np.std(fitness_values)
 
@@ -40,15 +40,15 @@ class DE:
             return False
         
         # Criterio por entropía (diversidad de valores fitness)
-        # entropy = self.calculate_fitness_entropy()
-        # if entropy < 1e-6:  # Umbral a ajustar
-        #     print("Low entropy ")
-        #     return False
+        entropy = self.calculate_fitness_entropy()
+        if entropy < 1e-6:  # Umbral a ajustar
+            print("Low entropy ")
+            return False
             
         return True
 
     def get_best(self):
-        fitness_values = np.array([self.func.evaluate(ind) for ind in self.pop])
+        fitness_values = np.array([self.func.eval(ind) for ind in self.pop])
         best_idx = np.argmin(fitness_values)
         return self.pop[best_idx]
 
@@ -77,17 +77,16 @@ class DE:
                     if np.random.uniform(0,1) < self.CR or j == R:
                         q[j] = self.pop[a][j] + self.F * (self.pop[b][j] - self.pop[c][j])
                         # q(j) = x(j)a + F(x(j)b − x(j)c )
-                q_eval =self.func.evaluate(q)
-                pop_eval = self.func.evaluate(self.pop[i])
+                q_eval =self.func.eval(q)
+                pop_eval = self.func.eval(self.pop[i])
                 func_eval += 2
                 if q_eval < pop_eval:
                     self.pop[i] = q
             n_gen += 1
-            best_fitness = float(self.func.evaluate(self.get_best()))
+            best_fitness = float(self.func.eval(self.get_best()))
             self.history.append(best_fitness)
             if n_gen % 10 == 0:
-                # print(f"Generation {n_gen}")
-                print(f"Generation {n_gen}, Best error: {best_fitness}")
+                print(f"Generation {n_gen}, Best fitness: {best_fitness}")
 
         return self.get_best()
             
@@ -95,26 +94,10 @@ class DE:
 
 
 if __name__ == "__main__":
-    
-    # Define the parameters for the PIDFunction
-    x0 = [0, 0]  # Initial position
-    t_end = 7  # End time for the simulation
-    del_t = 0.1  # Time step for the simulation
-    x = [1, 1]  # Amplitude of the trajectory in X and Y
-    w = [1, 1]  # Frequency of the trajectory in X and Y
-    teta = [45, 45]  #Initial Angles for the arm
-    sides = [0.3, 0.3]  # Lengths of the arm sides
-
-    # Create an instance of the PIDFunction
-    pid_function = PIDFunction(x0, t_end,del_t, x, w, teta, sides)
-
-    F = 0.8 # Factor de escala
-    CR = 0.9 # Factor de cruce
-
-    algorithm = DE(pid_function, n_pop= 30, n_gen= 500, F = 0.8, CR = 0.9)
+    x = [1e-16 for i in range(5)]
+    ackley = AckleyFunction(x)
+    algorithm = DE(ackley, n_pop= 10, n_gen= 1000, F = 0.8, CR = 0.9)
     best = algorithm.solve()
     print(f"Best solution: {best}")
-    print(f"Best error: {pid_function.evaluate(best)}")
+    print(f"Best fitness: {ackley.eval(best)}")
     algorithm.plot()
-    # Plot the position
-    pid_function.plot_position()
