@@ -7,10 +7,10 @@ def main():
     x0 = [0, 0]  # Initial position
     t_end = 10  # End time for the simulation
     del_t = 0.5  # Time step for the simulation
-    x = [5, 5]  # Amplitude of the trajectory in X and Y
+    x = [0.5, 0.5]  # Amplitude of the trajectory in X and Y
     w = [1, 1]  # Frequency of the trajectory in X and Y
     teta = [45, 45]  # Angles for the arm
-    sides = [3, 3]  # Lengths of the arm sides  
+    sides = [1, 1]  # Lengths of the arm sides  
 
     # Create an instance of the PIDFunction
     pid_function = PIDFunction(x0, t_end, del_t, x, w, teta, sides)

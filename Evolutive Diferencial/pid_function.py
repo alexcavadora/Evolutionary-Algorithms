@@ -103,9 +103,31 @@ class PIDFunction:
             y_values.append(self.get_Ypos(t))
         plt.figure(figsize=(8, 6))
         plt.plot(x_values, y_values, label='Position')
+
+        t_values = np.arange(0, self.t_end, self.delta_t)
+        x_values = [self.get_Xtrayectory(t) for t in t_values]
+        y_values = [self.get_Ytrayectory(t) for t in t_values]
+        plt.plot(x_values, y_values, label='Trajectory')
+        plt.xlabel('X Position')
+        plt.ylabel('Y Position')
+        plt.title('Trajectory of the Particle')
+        plt.legend()
+        plt.grid(True)
+        
+        # Add arm visualization at last position
+        x0, y0 = 0, 0
+        x1 = self.l1 * np.cos(self.teta1)
+        y1 = self.l1 * np.sin(self.teta1)
+        x2 = x1 + self.l2 * np.cos(self.teta2)
+        y2 = y1 + self.l2 * np.sin(self.teta2)
+        
+        plt.plot([x0, x1, x2], [y0, y1, y2], 'r-o', label='Arm Position')
+        plt.plot(self.get_Xtrayectory(t), self.get_Ytrayectory(t), 'g*', label='Target Position')
+        
         plt.xlabel('X Position')
         plt.ylabel('Y Position')
         plt.title('Position of the Particle')
         plt.legend()
         plt.grid(True)
+        plt.axis('equal')
         plt.show()
