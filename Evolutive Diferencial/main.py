@@ -16,12 +16,12 @@ def main():
     pid_function = PIDFunction(x0, t_end, del_t, x, w, teta, sides)
 
     # Set parameters for the differential evolution
-    population_size = 100  # Increase population size for better exploration
-    generations = 100  # Increase generations for better convergence
+    population_size = 50  # Increase population size for better exploration
+    generations = 50  # Increase generations for better convergence
     mutation_factor = 0.5  # Standard mutation factor
     crossover_probability = 0.7
     # Wider bounds for PID parameters to allow better exploration
-    bounds = [(0, 2), (0, 0.5), (0, 0.1)]  # Bounds for Kp, Ki, Kd
+    bounds = [(0, 10), (0, 0.1), (0, 1)]  # Bounds for Kp, Ki, Kd
 
     # Initialize the Differential Evolution algorithm
     best_solution = differential_evolution(
