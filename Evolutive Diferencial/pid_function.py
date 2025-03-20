@@ -34,10 +34,12 @@ class PIDFunction:
         return self.y0 + self.y * np.sin(self.w2 * t)
 
     def get_Xpos(self, t):
-        return self.l1 * np.cos(self.teta1) + self.l2 * np.cos(self.teta2)
+        # Correct forward kinematics for X position
+        return self.l1 * np.cos(self.teta1) + self.l2 * np.cos(self.teta1 + self.teta2)
 
     def get_Ypos(self, t):
-        return self.l1 * np.sin(self.teta1) + self.l2 * np.sin(self.teta2)
+        # Correct forward kinematics for Y position
+        return self.l1 * np.sin(self.teta1) + self.l2 * np.sin(self.teta1 + self.teta2)
 
     def get_Xerror(self, t):
         x_tray = self.get_Xtrayectory(t)
@@ -64,6 +66,7 @@ class PIDFunction:
         return proportional + integral + derivative
 
     def apply_PID(self, t):
+        # Apply PID control to both joint angles
         self.teta1 += self.get_Xpid(t) * self.delta_t
         self.teta2 += self.get_Ypid(t) * self.delta_t
 
@@ -71,18 +74,21 @@ class PIDFunction:
         self.kc = k[0]
         self.ki = k[1]
         self.kd = k[2]
-        sum = 0
+        sum_error = 0
+        # Reset angles to initial values
         self.teta1 = np.deg2rad(45)
         self.teta2 = np.deg2rad(45)
+        # Evaluate over the entire time range
         for t in np.arange(0, self.t_end, self.delta_t):
             self.apply_PID(t)
-            sum += self.get_Xerror(t) ** 2 + self.get_Yerror(t) ** 2
-        return sum
+            sum_error += self.get_Xerror(t) ** 2 + self.get_Yerror(t) ** 2
+        return sum_error
 
     def plot_trajectory(self):
         t_values = np.arange(0, self.t_end, self.delta_t)
         x_values = [self.get_Xtrayectory(t) for t in t_values]
         y_values = [self.get_Ytrayectory(t) for t in t_values]
+        plt.figure(figsize=(8, 6))
         plt.plot(x_values, y_values, label='Trajectory')
         plt.xlabel('X Position')
         plt.ylabel('Y Position')
@@ -95,34 +101,50 @@ class PIDFunction:
         t_values = np.arange(0, self.t_end, self.delta_t)
         x_values = []
         y_values = []
+        arm_positions = []
+        
+        # Reset angles to initial values
         self.teta1 = np.deg2rad(45)
         self.teta2 = np.deg2rad(45)
+        
+        # Simulate the arm movement over time
         for t in t_values:
             self.apply_PID(t)
-            x_values.append(self.get_Xpos(t))
-            y_values.append(self.get_Ypos(t))
+            x_pos = self.get_Xpos(t)
+            y_pos = self.get_Ypos(t)
+            x_values.append(x_pos)
+            y_values.append(y_pos)
+            
+            # Store arm joint positions for visualization
+            x0, y0 = 0, 0
+            x1 = self.l1 * np.cos(self.teta1)
+            y1 = self.l1 * np.sin(self.teta1)
+            x2 = x1 + self.l2 * np.cos(self.teta1 + self.teta2)
+            y2 = y1 + self.l2 * np.sin(self.teta1 + self.teta2)
+            arm_positions.append(((x0, y0), (x1, y1), (x2, y2)))
+        
+        # Create the plot
         plt.figure(figsize=(8, 6))
-        plt.plot(x_values, y_values, label='Position')
-
+        
+        # Plot the arm's end effector path
+        plt.plot(x_values, y_values, 'b-', label='Position')
+        
+        # Plot the desired trajectory
         t_values = np.arange(0, self.t_end, self.delta_t)
-        x_values = [self.get_Xtrayectory(t) for t in t_values]
-        y_values = [self.get_Ytrayectory(t) for t in t_values]
-        plt.plot(x_values, y_values, label='Trajectory')
-        plt.xlabel('X Position')
-        plt.ylabel('Y Position')
-        plt.title('Trajectory of the Particle')
-        plt.legend()
-        plt.grid(True)
+        x_traj = [self.get_Xtrayectory(t) for t in t_values]
+        y_traj = [self.get_Ytrayectory(t) for t in t_values]
+        plt.plot(x_traj, y_traj, 'orange', label='Trajectory')
         
-        # Add arm visualization at last position
-        x0, y0 = 0, 0
-        x1 = self.l1 * np.cos(self.teta1)
-        y1 = self.l1 * np.sin(self.teta1)
-        x2 = x1 + self.l2 * np.cos(self.teta2)
-        y2 = y1 + self.l2 * np.sin(self.teta2)
+        # Plot the final arm position
+        last_pos = arm_positions[-1]
+        plt.plot([last_pos[0][0], last_pos[1][0], last_pos[2][0]], 
+                 [last_pos[0][1], last_pos[1][1], last_pos[2][1]], 
+                 'r-o', label='Arm Position')
         
-        plt.plot([x0, x1, x2], [y0, y1, y2], 'r-o', label='Arm Position')
-        plt.plot(self.get_Xtrayectory(t), self.get_Ytrayectory(t), 'g*', label='Target Position')
+        # Plot the target position
+        plt.plot(self.get_Xtrayectory(t_values[-1]), 
+                 self.get_Ytrayectory(t_values[-1]), 
+                 'g*', label='Target Position')
         
         plt.xlabel('X Position')
         plt.ylabel('Y Position')

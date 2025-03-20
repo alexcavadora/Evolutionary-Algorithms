@@ -6,7 +6,7 @@ def main():
     # Define the parameters for the PIDFunction
     x0 = [0, 0]  # Initial position
     t_end = 10  # End time for the simulation
-    del_t = 0.5  # Time step for the simulation
+    del_t = 0.1  # Smaller time step for better accuracy
     x = [0.5, 0.5]  # Amplitude of the trajectory in X and Y
     w = [1, 1]  # Frequency of the trajectory in X and Y
     teta = [45, 45]  # Angles for the arm
@@ -16,11 +16,12 @@ def main():
     pid_function = PIDFunction(x0, t_end, del_t, x, w, teta, sides)
 
     # Set parameters for the differential evolution
-    population_size = 30  # Reduce the population size
-    generations = 50  # Reduce the number of generations
-    mutation_factor = 0.3
+    population_size = 100  # Increase population size for better exploration
+    generations = 100  # Increase generations for better convergence
+    mutation_factor = 0.5  # Standard mutation factor
     crossover_probability = 0.7
-    bounds = [(0, 1), (0, 0.1), (0, 0.01)]  # Example bounds for PID parameters
+    # Wider bounds for PID parameters to allow better exploration
+    bounds = [(0, 2), (0, 0.5), (0, 0.1)]  # Bounds for Kp, Ki, Kd
 
     # Initialize the Differential Evolution algorithm
     best_solution = differential_evolution(
