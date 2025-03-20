@@ -5,9 +5,9 @@ from differential_evolution import differential_evolution
 def main():
     # Define the parameters for the PIDFunction
     x0 = [0, 0]  # Initial position
-    t_end = 5  # End time for the simulation
-    del_t = 0.05  # Time step for the simulation
-    x = [10, 10]  # Amplitude of the trajectory in X and Y
+    t_end = 10  # End time for the simulation
+    del_t = 0.5  # Time step for the simulation
+    x = [5, 5]  # Amplitude of the trajectory in X and Y
     w = [1, 1]  # Frequency of the trajectory in X and Y
     teta = [45, 45]  # Angles for the arm
     sides = [3, 3]  # Lengths of the arm sides  
@@ -17,8 +17,8 @@ def main():
 
     # Set parameters for the differential evolution
     population_size = 30  # Reduce the population size
-    generations = 100  # Reduce the number of generations
-    mutation_factor = 0.7
+    generations = 50  # Reduce the number of generations
+    mutation_factor = 0.3
     crossover_probability = 0.7
     bounds = [(0, 1), (0, 0.1), (0, 0.01)]  # Example bounds for PID parameters
 
