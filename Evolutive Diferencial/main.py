@@ -1,4 +1,4 @@
-from optFunc import PIDFunction
+from optFunc2 import PIDFunction
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -15,7 +15,7 @@ class DE:
 
     def init_population(self):
         ## Aqui se definen los rangos de la poblacion
-        limit = 15
+        # limit = 15
         # self.pop = np.random.uniform(0, limit, (self.n_pop, self.n))
         self.pop = np.zeros((self.n_pop, self.n))
         for i in range(self.n_pop):
@@ -40,7 +40,7 @@ class DE:
 
     def stop_criteria(self, func_eval, gen_count=0):
         # Criterio por número de evaluaciones
-        if func_eval >= 100000:
+        if func_eval >= 10000:
             print("Max function evaluations reached")
             return False
         
@@ -48,12 +48,6 @@ class DE:
         if gen_count >= self.n_gen:
             print("Max generations reached")
             return False
-        
-        # Criterio por entropía (diversidad de valores fitness)
-        # entropy = self.calculate_fitness_entropy()
-        # if entropy < 1e-6:  # Umbral a ajustar
-        #     print("Low entropy ")
-        #     return False
             
         return True
 
@@ -63,7 +57,7 @@ class DE:
         return self.pop[best_idx]
 
     def plot(self):
-        plt.style.use("ggplot")
+        # plt.style.use("ggplot")
         # Intercambia el orden de los argumentos para que el fitness esté en el eje Y
         plt.plot(range(len(self.history)), self.history)
         plt.title("Fitness over generations")
@@ -97,11 +91,11 @@ class DE:
                     self.pop[i] = q
                     # print(f'pop[i]: {self.pop[i]}')
             n_gen += 1
-            # best_fitness = float(self.func.evaluate(self.get_best()))
-            # self.history.append(best_fitness)
+            best_fitness = float(self.func.evaluate(self.get_best()))
+            self.history.append(best_fitness)
             # if n_gen % 10 == 0:
-            print(f"Generation {n_gen}")
-            # print(f"Generation {n_gen}, Best error: {best_fitness}")
+            # print(f"Generation {n_gen}")
+            print(f"Generation {n_gen}, Best error: {best_fitness}")
 
         return self.get_best()
             
@@ -112,24 +106,22 @@ if __name__ == "__main__":
     
     # Define the parameters for the PIDFunction
     x0 = [0, 0]  # Initial position
-    t_end = 30  # End time for the simulation
-    del_t = 0.25  # Time step for the simulation
-    x = [5, 5]  # Amplitude of the trajectory in X and Y
-    w = [1, 3]  # Frequency of the trajectory in X and Y
-    teta = [45, 45]  #Initial Angles for the arm
-    sides = [3, 3]  # Lengths of the arm sides
+    t_end = 64  # End time for the simulation
+    del_t = 0.0995  # Time step for the simulation
+    sides = [0.75, 0.75]  # Lengths of the arm sides
 
     # Create an instance of the PIDFunction
-    pid_function = PIDFunction(x0, t_end,del_t, x, w, teta, sides)
-    pid_function.plot_trajectory()
+    pid_system = PIDFunction(x0, t_end, del_t, sides[0], sides[1])
+    # pid_function.plot_trajectory()
 
     F = 0.8 # Factor de escala
     CR = 0.9 # Factor de cruce
 
-    algorithm = DE(pid_function, n_pop= 10, n_gen= 10, F = 0.8, CR = 0.9)
+    algorithm = DE(pid_system, n_pop= 30, n_gen= 50, F = F, CR = CR)
     best = algorithm.solve()
     print(f"Best solution: {best}")
-    print(f"Best error: {pid_function.evaluate(best)}")
-    # algorithm.plot()
+    print(f"Best error: {pid_system.evaluate(best)}")
+    algorithm.plot()
     # Plot the position
-    pid_function.plot_position()
+    pid_system.plot_comparison()
+    pid_system.plot_arm_animation()

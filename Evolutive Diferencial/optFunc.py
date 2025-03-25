@@ -2,6 +2,7 @@ import numpy as np
 from scipy import integrate
 import matplotlib.pyplot as plt
 from lineSearch import linSearch, BFGSOptimizer
+from scipy.optimize import minimize
 
 class tetaFunc():
   def __init__(self, l1 ,l2, Px, Py):
@@ -11,16 +12,19 @@ class tetaFunc():
     self.Py = Py
 
   def eval(self, teta):
+    # teta = np.radians(teta)
     e1 = self.Px - self.l1*np.cos(teta[0]) - self.l2*np.cos(teta[1]) 
     e2 = self.Py - self.l1*np.sin(teta[0]) - self.l2*np.sin(teta[1])
     return e1**2 + e2**2
   
   def grad(self, teta):
+    # teta = np.radians(teta)
     e1 = self.Px - self.l1*np.cos(teta[0]) - self.l2*np.cos(teta[1]) 
     e2 = self.Py - self.l1*np.sin(teta[0]) - self.l2*np.sin(teta[1])
     grad1 = 2*self.l1*( e1*np.sin(teta[0]) - e2*np.cos(teta[0]) )
     grad2 = 2*self.l2*( e1*np.sin(teta[1]) - e2*np.cos(teta[1]) )
     gradient = np.array([grad1, grad2])
+
     return gradient
 
 class PIDFunction():
@@ -44,8 +48,8 @@ class PIDFunction():
     self.x_traj = []
     self.y_traj = []
     self.t_values = np.arange(0, self.t_end) * self.delta_t
-    x = self.get_Xpos()
-    y = self.get_Ypos()
+    x = 0
+    y = 0
     for t in self.t_values:
       x = x + self.x_amp * np.cos(self.w1 * t)
       y = y + self.y_amp * np.sin(self.w2 * t)
@@ -53,61 +57,21 @@ class PIDFunction():
       self.y_traj.append(y)
   
   def get_Xpos(self):
-    return self.l1 * np.cos(self.teta1) + self.l2 * np.cos(np.radians(self.teta2))
+    return self.x0 + self.l1 * np.cos(self.teta1) + self.l2 * np.cos(self.teta2)
 
   def get_Ypos(self):
-    return self.l1 * np.sin(self.teta1) + self.l2 * np.sin(np.radians(self.teta2))
+    return self.y0 + self.l1 * np.sin(self.teta1) + self.l2 * np.sin(self.teta2)
 
   def apply_PID(self,Px, Py):
     func = tetaFunc(self.l1, self.l2, Px, Py)
     # optimizer = linSearch(func, stop_criterion, step_condition)
-    optimizer = BFGSOptimizer(func)
-    teta_i = [self.teta1, self.teta2]
-    # teta_i = np.random.rand(2)
-    x_opt = optimizer.optimize(teta_i)
+
+    optimizer = minimize(func.eval, [self.teta1, self.teta2], jac=func.grad, method='BFGS')
+    x_opt = optimizer.x
+
     self.teta1 = x_opt[0]
     self.teta2 = x_opt[1]
   
-  # def apply_PID(self, Px, Py):
-  #   # Cinemática inversa analítica
-  #   l1, l2 = self.l1, self.l2
-  #   x, y = Px, Py
-  #   d_sq = x**2 + y**2
-  #   d = np.sqrt(d_sq)
-    
-  #   # Si el punto está fuera de alcance, lo ajustamos al límite alcanzable
-  #   if d > l1 + l2:
-  #       # Normalizar y escalar al máximo alcance
-  #       factor = (l1 + l2) / d
-  #       x *= factor
-  #       y *= factor
-  #       d = l1 + l2
-  #   elif d < abs(l1 - l2):
-  #       # Ajustar para el alcance mínimo
-  #       if d == 0:
-  #           # Manejar caso especial en origen
-  #           x = abs(l1 - l2)
-  #           y = 0
-  #       else:
-  #           factor = abs(l1 - l2) / d
-  #           x *= factor
-  #           y *= factor
-  #       d = abs(l1 - l2)
-    
-  #   # Cálculo de theta2
-  #   cos_theta2 = (d_sq - l1**2 - l2**2) / (2 * l1 * l2)
-  #   cos_theta2 = np.clip(cos_theta2, -1.0, 1.0)
-  #   # Elegir solución de "codo arriba"
-  #   theta2 = np.arccos(cos_theta2)
-    
-  #   # Cálculo de theta1
-  #   gamma = np.arctan2(y, x)
-  #   beta = np.arctan2(l2 * np.sin(theta2), l1 + l2 * np.cos(theta2))
-  #   theta1 = gamma - beta
-    
-  #   # Actualizar ángulos en grados
-  #   self.teta1 = np.degrees(theta1)
-  #   self.teta2 = np.degrees(theta2)
 
   def evaluate(self, k, teta_init=None):
     self.kc, self.ki, self.kd = k
@@ -151,7 +115,9 @@ class PIDFunction():
         # Aplicar control y cinemática inversa
         Px_new = Px + u1
         Py_new = Py + u2
-        self.apply_PID(Px_new, Py_new)
+
+        # self.apply_PID(Px_new, Py_new)
+        self.apply_PID(x_target, y_target)
 
     return sum_sq_error
       
@@ -159,6 +125,7 @@ class PIDFunction():
       
     plt.figure(figsize=(8, 6))
     plt.plot(self.x_traj, self.y_traj, label='Trajectory')
+    plt.scatter(self.x0, self.y0, label='Inicio', color='red')
     plt.xlabel('X Position')
     plt.ylabel('Y Position')
     plt.title('Trajectory of the Particle')
@@ -210,6 +177,7 @@ class PIDFunction():
     
     plt.figure(figsize=(8, 6))
     plt.plot(x_values, y_values, label='Position')
+    plt.scatter(x_values[0], y_values[0], label='Inicio', color='red')
     plt.xlabel('X Position')
     plt.ylabel('Y Position')
     plt.title('Position of the Particle')
@@ -217,30 +185,211 @@ class PIDFunction():
     plt.grid(True)
     plt.show()
 
+  def plot_both(self, teta_init = [45,45]):
+
+    plt.figure(figsize=(8, 6))
+    plt.plot(self.x_traj, self.y_traj, label='Trajectory', linestyle='--', alpha=0.75)
+    # plt.plot  
+    plt.scatter(self.x0, self.y0, label='punto fijo', color='red')
+    plt.xlabel('X Position')
+    plt.ylabel('Y Position')
+    plt.title('Trajectory of the Particle')
+    plt.legend()
+    plt.grid(True)
+
+    
+    x_values = []
+    y_values = []
+    self.teta1, self.teta2 = teta_init
+    x_prev_error = 0
+    y_prev_error = 0
+    x_integral = 0
+    y_integral = 0
+
+    for t_idx in range(self.t_end):
+        Px = self.get_Xpos()
+        Py = self.get_Ypos()
+        x_values.append(Px)
+        y_values.append(Py)
+        x_target = self.x_traj[t_idx]
+        y_target = self.y_traj[t_idx]
+
+        # Errores
+        x_error = x_target - Px
+        y_error = y_target - Py
+
+        # PID para X
+        x_proportional = self.kc * x_error
+        x_integral += self.ki * x_error * self.delta_t
+        x_derivative = self.kd * (x_error - x_prev_error) / self.delta_t
+        u1 = x_proportional + x_integral + x_derivative
+
+        # PID para Y
+        y_proportional = self.kc * y_error
+        y_integral += self.ki * y_error * self.delta_t
+        y_derivative = self.kd * (y_error - y_prev_error) / self.delta_t
+        u2 = y_proportional + y_integral + y_derivative
+
+        # Actualizar errores previos
+        x_prev_error, y_prev_error = x_error, y_error
+
+        # Aplicar control y cinemática inversa
+        Px_new = Px + u1
+        Py_new = Py + u2
+        self.apply_PID(Px_new, Py_new)
+    
+    plt.plot(x_values, y_values, label='Position')
+    plt.xlabel('X Position')
+    plt.ylabel('Y Position')
+    plt.title('Position of the Particle')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+  def plot_arm_mov(self, teta_init= [45,45]):
+      import matplotlib.animation as animation
+      
+      # Convert initial angles to radians
+      self.teta1, self.teta2 = np.radians(teta_init)
+      
+      # Initialize arrays to store positions
+      x_end_values = []
+      y_end_values = []
+      x_joint_values = []
+      y_joint_values = []
+      
+      # Reset PID controller variables
+      x_prev_error = 0
+      y_prev_error = 0
+      x_integral = 0
+      y_integral = 0
+      
+      # Calculate positions at each time step
+      for t_idx in range(self.t_end):
+        # Current end effector position
+        Px = self.get_Xpos()
+        Py = self.get_Ypos()
+        # Joint position (where the two links connect)
+        x_joint = self.l1 * np.cos(self.teta1)
+        y_joint = self.l1 * np.sin(self.teta1)
+        
+        # Store positions
+        x_end_values.append(Px)
+        y_end_values.append(Py)
+        x_joint_values.append(x_joint)
+        y_joint_values.append(y_joint)
+        
+        # Target positions
+        x_target = self.x_traj[t_idx]
+        y_target = self.y_traj[t_idx]
+        
+        # PID control calculation
+        x_error = x_target - Px
+        y_error = y_target - Py
+        
+        x_proportional = self.kc * x_error
+        x_integral += self.ki * x_error * self.delta_t
+        x_derivative = self.kd * (x_error - x_prev_error) / self.delta_t
+        u1 = x_proportional + x_integral + x_derivative
+        
+        y_proportional = self.kc * y_error
+        y_integral += self.ki * y_error * self.delta_t
+        y_derivative = self.kd * (y_error - y_prev_error) / self.delta_t
+        u2 = y_proportional + y_integral + y_derivative
+        
+        x_prev_error, y_prev_error = x_error, y_error
+        
+        Px_new = Px + u1
+        Py_new = Py + u2
+        self.apply_PID(Px_new, Py_new)
+      
+      # Create figure for animation
+      fig, ax = plt.subplots(figsize=(10, 8))
+      
+      # Set the limits of the plot
+      max_reach = self.l1 + self.l2 + max(self.x_amp, self.y_amp) + 1
+      ax.set_xlim(self.x0 - max_reach, self.x0 + max_reach)
+      ax.set_ylim(self.y0 - max_reach, self.y0 + max_reach)
+      
+      # Plot the target trajectory
+      ax.plot(self.x_traj, self.y_traj, 'b--', label='Target Trajectory')
+      
+      # Initialize arm segments
+      line_segment1, = ax.plot([], [], 'r-', linewidth=3, label='Link 1')
+      line_segment2, = ax.plot([], [], 'g-', linewidth=3, label='Link 2')
+      joint_point, = ax.plot([], [], 'ko', markersize=8)
+      end_point, = ax.plot([], [], 'bo', markersize=8)
+      
+      # Add origin point
+      ax.plot(self.x0, self.y0, 'ro', markersize=10, label='Origin')
+      
+      ax.set_xlabel('X Position')
+      ax.set_ylabel('Y Position')
+      ax.set_title('Robotic Arm Animation')
+      ax.legend()
+      ax.grid(True)
+      
+      def init():
+        line_segment1.set_data([], [])
+        line_segment2.set_data([], [])
+        joint_point.set_data([], [])
+        end_point.set_data([], [])
+        return line_segment1, line_segment2, joint_point, end_point
+      
+      def animate(i):
+        # First segment: from origin to joint
+        x1 = [self.x0, x_joint_values[i]]
+        y1 = [self.y0, y_joint_values[i]]
+        line_segment1.set_data(x1, y1)
+        
+        # Second segment: from joint to end effector
+        x2 = [x_joint_values[i], x_end_values[i]]
+        y2 = [y_joint_values[i], y_end_values[i]]
+        line_segment2.set_data(x2, y2)
+        
+        joint_point.set_data([x_joint_values[i]], [y_joint_values[i]])
+        end_point.set_data([x_end_values[i]], [y_end_values[i]])
+        
+        return line_segment1, line_segment2, joint_point, end_point
+      
+      anim = animation.FuncAnimation(fig, animate, init_func=init, 
+                       frames=self.t_end, interval=self.delta_t*1000, 
+                       blit=True)
+      
+      plt.show()
+      
+      # Uncomment to save animation
+      anim.save('arm_animation.gif', writer='pillow', fps=int(1/self.delta_t))
+
 
     
 if __name__ == "__main__":
-  # Example usage:
+
   # Define the parameters for the PIDFunction
-  x0 = [0, 0]  # Initial position
+  x0 = [2.5, 5]  # Initial position
   t_end = 30  # End time for the simulation
   del_t = 0.25  # Time step for the simulation
-  x = [10, 10]  # Amplitude of the trajectory in X and Y
+  x = [5, 5]  # Amplitude of the trajectory in X and Y
   w = [1, 3]  # Frequency of the trajectory in X and Y
-  teta = [45, 45]  # Angles for the arm
-  sides = [3, 3]  # Lengths of the arm sides
+  teta = [45, 45]  #Initial Angles for the arm
+  sides = [11, 11]  # Lengths of the arm sides
 
   # Create an instance of the PIDFunction
   pid_function = PIDFunction(x0, t_end,del_t, x, w, teta, sides)
 
   # Plot the trajectory
-  pid_function.plot_trajectory()
+  # pid_function.plot_trajectory()
 
   # Evaluate the function with some parameters
-  print(f'Error: {pid_function.evaluate(k= [10, 0.1, 0.01])}')
+  # 20.00, KI1 = 10.0000, KD1 = 0.0010
+  k = [-6463.73281787, 44008.637523, 578.31744126]
+  print(f'Error: {pid_function.evaluate(k= k)}')
 
   # Plot the position
-  pid_function.plot_position()
+  # pid_function.plot_position()
+
+  pid_function.plot_both()
+  # pid_function.plot_arm_mov()
 
 
     
@@ -285,30 +434,3 @@ class AckleyFunction():
 
     return (1.0/self.d)*( ( x_np * x_np.T * self.a/self.d + ( I + ( x_np * x_np.T )*2 ) * ex1 ) * (-self.b/raiz**2) + ( np.diag(np.cos(cx)) + senx * senx.T * 1.0/self.d) * self.c**2 * ex2)
   
-
-# if __name__ == "__main__":
-#   # Example with a 5D vector
-#   zero = 1e-16
-#   x = [zero for i in range(5)]
-#   print(f"Initial x: {x}")
-#   # Initialize the Ackley function
-#   ackley = AckleyFunction(x)
-
-  
-#   # Evaluate function at x
-#   value = ackley.eval(x)
-#   print(f"Function value f(x) = {value}")
-#   print("-" * 40)
-
-  
-#   # Calculate gradient at x
-#   gradient = ackley.grad(x)
-#   print("Gradient at x:")
-#   print(gradient)
-#   print("-" * 40)
-  
-#   # Calculate Hessian at x
-#   hessian = ackley.hess(x)
-#   print("Hessian matrix at x:")
-#   print(hessian)
-#   print("-" * 40)
