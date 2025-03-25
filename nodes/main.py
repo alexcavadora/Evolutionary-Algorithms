@@ -1,6 +1,7 @@
 from Parser import SimulatedCircuit
 from NodeClass import node
 import random
+import matplotlib.pyplot as plt
 
 class GA:
 
@@ -17,6 +18,7 @@ class GA:
         self.offspring = [0]*n_pop
         self.decoder = SimulatedCircuit("dec.blif")
         self.decoder.simulate()
+        self.history = []
         
     def init_pop(self):
         for i in range(self.n_pop):
@@ -31,9 +33,8 @@ class GA:
             output_vector.append(output) # Almacena la salida
 
         error = self.decoder.compare_outputs(output_vector)
-        error += tree.get_depth()
-        # depht = tree.get_depth()
-        return error
+        depht = tree.get_depth()
+        return error + depht
     
     def evaluate_pop(self):
         self.pop_fitness = []
@@ -85,43 +86,38 @@ class GA:
 
     def solve(self):
         self.init_pop()
-        self.evaluate_pop()  # Add initial population evaluation
-        best_history = [self.best_fitness]
-        
         for i in range(self.n_gen):
+            self.evaluate_pop()
             self.select_pop()
             self.crossover()
             self.mutation()
-            self.pop = [ind.copy() for ind in self.offspring]  # Deep copy to prevent reference issues
-            self.evaluate_pop()
-            best_history.append(self.best_fitness)
-            
+            self.pop = self.offspring.copy()
             print(f"Generation: {i}, Best fitness: {self.best_fitness}")
+            self.history.append(self.best_fitness)
             if self.best_fitness == 0:
                 break
-                
+
         print(f"Best fitness: {self.best_fitness}")
-        return best_history
+
+    def best_evolution(self):
+        plt.style.use('ggplot')
+        plt.title("Best fitness evolution")
+        plt.xlabel("Generation")
+        plt.ylabel("Fitness")
+        plt.plot(self.history)
+        plt.show()
         
+
 if __name__ == "__main__":
 
-    POPULATION = 80
+    POPULATION = 10
     GENERATIONS = 100
-    CROSSOVER = 0.75
+    CROSSOVER = 0.8
     MUTATION = 0.1
 
 
     algorithm = GA(POPULATION, GENERATIONS, CROSSOVER, MUTATION);
-    history = algorithm.solve();
+    algorithm.solve();
     algorithm.best.visualize();
+    algorithm.best_evolution();
     print(algorithm.best)
-    
-    # Optional: Add visualization of fitness progress
-    import matplotlib.pyplot as plt
-    plt.figure(figsize=(10, 6))
-    plt.plot(history)
-    plt.title('Best Fitness Over Generations')
-    plt.xlabel('Generation')
-    plt.ylabel('Fitness (lower is better)')
-    plt.grid(True)
-    plt.show()
