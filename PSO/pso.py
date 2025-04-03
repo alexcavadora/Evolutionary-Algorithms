@@ -5,7 +5,6 @@ from mpl_toolkits import mplot3d
 from matplotlib import animation
 import os
 
-
 def ackley_fun(x):
     """Ackley function
     Domain: -32 < xi < 32
@@ -22,7 +21,7 @@ def rosenbrock_fun(x):
 
 
 def pso(func, bounds, swarm_size=10, inertia=0.5, pa=0.8, ga=0.9, 
-        max_vnorm=10, num_iters=100, verbose=False, func_name=None):
+        max_vnorm=10, num_iters=100, verbose=Faise, func_name=None):
     """Perticle Swarm Optimization (PSO)
     # Arguments
         func: function to be optimized
@@ -235,11 +234,8 @@ def experiment_suits():
                             save2mp4=save2mp4,
                             save2gif=save2gif)
 
-
 ## Perform experiment sets
 # experiment_suits()
-
-
 
 ## If you want to manually excute
 ## Ackley func
