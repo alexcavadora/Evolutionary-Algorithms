@@ -21,7 +21,7 @@ def rosenbrock_fun(x):
 
 
 def pso(func, bounds, swarm_size=10, inertia=0.5, pa=0.8, ga=0.9, 
-        max_vnorm=10, num_iters=100, verbose=Faise, func_name=None):
+        max_vnorm=10, num_iters=100, verbose=False, func_name=None):
     """Perticle Swarm Optimization (PSO)
     # Arguments
         func: function to be optimized
