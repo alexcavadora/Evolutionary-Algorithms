@@ -1,24 +1,52 @@
-import os 
+import os
 from PIL import Image
+import numpy as np
+from image_replicator import ImageReplicator
 
-# Read image
-INPUT_IMAGE = "image_2.png"
-image = Image.open(f"{os.path.dirname(__file__)}/{INPUT_IMAGE}")
+def preprocess_image(input_image_path):
+    """Preprocess the image: load, convert to grayscale, and save."""
+    # Get the directory of the script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    image_path = os.path.join(script_dir, input_image_path)
+    
+    try:
+        # Read image
+        image = Image.open(image_path)
+        
+        # Convert to grayscale
+        image = image.convert('L')
+        
+        # Save the grayscale image
+        output_path = os.path.join(script_dir, "image_bw.png")
+        image.save(output_path)
+        
+        print(f"Preprocessed image saved to {output_path}")
+        return output_path
+    except Exception as e:
+        print(f"Error preprocessing image: {e}")
+        return None
 
-# Convert to RGBA to handle transparency
-if image.mode == 'P':
-  image = image.convert('RGBA')
+def main():
+    # Input image path
+    INPUT_IMAGE = "imperial-japanese-rising-sun-flag-uhd-4k-wallpaper.jpg"
+    
+    # Preprocess the image
+    preprocessed_image = preprocess_image(INPUT_IMAGE)
+    
+    if preprocessed_image:
+        # Create the replicator with optimized parameters
+        replicator = ImageReplicator(
+            image_path=preprocessed_image,
+            output_path="output_images",
+            max_strokes=10000,  # Increase for better quality
+            section_size=15,
+            scale_factor=0.2  # Scale down for faster processing
+        )
+        
+        # Start the replication process
+        print("Starting image replication...")
+        replicator.replicate_image()
+        print("Replication complete!")
 
-# Transform to black and white
-image = image.convert('L')
-
-# Save image
-image.save(f"{os.path.dirname(__file__)}/image_bw.png")
-
-# Convert to vector
-vector = []
-for i in range(image.size[0]):
-    for j in range(image.size[1]):
-        vector.append(image.getpixel((i, j)))
-
-# Save vector to image
+if __name__ == "__main__":
+    main()
